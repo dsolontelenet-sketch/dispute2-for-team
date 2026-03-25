@@ -303,6 +303,7 @@
         <option value="os">OS</option>
         <option value="is">IS</option>
         <option value="tw">TW</option>
+        <option value="partnerportal">Partner Portal</option>
       </select>
     </div>
 
@@ -505,13 +506,14 @@ function getFilename() {
   const v   = document.getElementById('vendor').value;
   const acc = document.getElementById('accepted').value.trim();
   if (!v || !acc) return null;
-  if (v === 'barracuda')  return `Disputes Priority 1 Barracuda accepted at ${acc}`;
-  if (v === 'zo')         return `Disputes Priority 1 ZO accepted at ${acc}`;
-  if (v === 'az')         return `Disputes Priority 1 AZ accepted at ${acc}`;
-  if (v === 'checkpoint') return `Disputes Priority 1 Checkpoint ${acc} ${getCpName()}`;
-  if (v === 'os')         return `Disputes Priority 2 OS accepted at ${acc}`;
-  if (v === 'is')         return `Disputes Priority 1 IS accepted at ${acc}`;
-  if (v === 'tw')         return `Disputes Priority 1 TW accepted at ${acc}`;
+  if (v === 'barracuda')     return `Disputes Priority 1 Barracuda accepted at ${acc}`;
+  if (v === 'zo')            return `Disputes Priority 1 ZO accepted at ${acc}`;
+  if (v === 'az')            return `Disputes Priority 1 AZ accepted at ${acc}`;
+  if (v === 'checkpoint')    return `Disputes Priority 1 Checkpoint ${acc} ${getCpName()}`;
+  if (v === 'os')            return `Disputes Priority 2 OS accepted at ${acc}`;
+  if (v === 'is')            return `Disputes Priority 1 IS accepted at ${acc}`;
+  if (v === 'tw')            return `Disputes Priority 1 TW accepted at ${acc}`;
+  if (v === 'partnerportal') return `P1 dispute Partner Portal ${acc}`;
   if (v === 'microsoft') {
     return selectedPriority === 1
       ? `Disputes Priority 1 Microsoft ${acc}`
@@ -539,7 +541,7 @@ function renderWiki(acc, count, name) {
     `Total: <span class="hl-num">${c} URL</span> \n` +
     `Categorized:<span class="hl-num">${fraction}</span> \n` +
     `Uploaded on GD: <span class="hl-num">${fraction}</span>\n` +
-    `Comment: Disputes Priority 1 Checkpoint <span class="hl-ts">${acc}</span> <span class="hl-name"></span>\n\n` +
+    `Comment: Disputes Priority 1 Checkpoint <span class="hl-ts">${acc}</span> <span class="hl-name">${name}</span>\n\n` +
     `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="hl-none">None</span> \n` +
