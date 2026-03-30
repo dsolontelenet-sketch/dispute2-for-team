@@ -525,23 +525,26 @@ function getFilename() {
 // ── WIKI MESSAGE ──
 function buildWikiText(acc, count, name) {
   const c = pad(count);
+  const totalLabel = count >= 2 ? 'URLs' : 'URL';
   const fraction = `${c}/${c}`;
-  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} URL). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} URL \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc} \n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」None \n「Security category」None`;
+  
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc} \n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」None \n「Security category」None`;
 }
 
 function renderWiki(acc, count, name) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
+  const totalLabel = count >= 2 ? 'URLs' : 'URL';
   const el = document.getElementById('wiki-message');
 
   el.innerHTML =
     `Hi Chisato-san,\n\n` +
-    `Done uploading/updating on GD the data from disputes CP P1 2026 file (<span class="hl-num">${c} URL</span>). Thank you.\n\n` +
+    `Done uploading/updating on GD the data from disputes CP P1 2026 file (<span class="hl-num">${c} ${totalLabel}</span>). Thank you.\n\n` +
     `[Mail] Disputes priority 1 accepted <span class="hl-ts">${acc}</span> UTC \n` +
-    `Total: <span class="hl-num">${c} URL</span> \n` +
+    `Total: <span class="hl-num">${c} ${totalLabel}</span> \n` +
     `Categorized:<span class="hl-num">${fraction}</span> \n` +
     `Uploaded on GD: <span class="hl-num">${fraction}</span>\n` +
-    `Comment: Disputes Priority 1 Checkpoint <span class="hl-ts">${acc}</span>` +
+    `Comment: Disputes Priority 1 Checkpoint <span class="hl-ts">${acc}</span>\n` +
     `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="hl-none">None</span> \n` +
