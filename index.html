@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +6,11 @@
 <title>Disputes File Generator</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%237c3aed'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-weight='700' font-size='40' fill='white'>D</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Firebase (compat SDK so we can use plain <script> tags, no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
 
@@ -42,7 +46,7 @@
 
   .container { width: 100%; max-width: 720px; }
 
-  .header { margin-bottom: 2rem; }
+  .header { margin-bottom: 2rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
   .header h1 {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 1.1rem; font-weight: 600;
@@ -50,6 +54,26 @@
     text-transform: uppercase; margin-bottom: 0.4rem;
   }
   .header p { font-size: 0.85rem; color: var(--muted); font-weight: 300; }
+
+  .active-user {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 20px; padding: 0.4rem 0.9rem 0.4rem 0.6rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .active-user .avatar {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent); color: #0d0f14;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 0.7rem; flex-shrink: 0;
+  }
+  .active-user .name { color: var(--text); }
+  .active-user .switch-link {
+    color: var(--muted); cursor: pointer; text-decoration: underline;
+    text-decoration-color: transparent; transition: all 0.15s; font-size: 0.7rem;
+  }
+  .active-user .switch-link:hover { color: var(--accent); text-decoration-color: var(--accent); }
 
   .card {
     background: var(--panel);
@@ -317,13 +341,185 @@
   /* TW-specific highlights */
   .wiki-message .hl-tw-num { color: var(--wiki-tw-accent); }
   .wiki-message .hl-tw-ts  { color: #a8e6a3; }
+
+  /* ── USER MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(5,6,10,0.82);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; backdrop-filter: blur(3px);
+  }
+  .modal-overlay.hidden { display: none; }
+
+  .modal-card {
+    width: 100%; max-width: 420px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.75rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-card h2 {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem;
+    color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+  .modal-card .sub { font-size: 0.8rem; color: var(--muted); margin-bottom: 1.25rem; }
+
+  .name-list {
+    display: flex; flex-direction: column; gap: 0.5rem;
+    margin-bottom: 1.25rem; max-height: 260px; overflow-y: auto;
+  }
+  .name-pill {
+    display: flex; align-items: center; gap: 0.7rem;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.6rem 0.6rem 0.6rem 0.85rem;
+    transition: all 0.15s;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem;
+  }
+  .name-pill:hover { border-color: var(--accent); background: rgba(0,212,255,0.06); }
+  .name-pill .avatar {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: var(--accent); color: #0d0f14;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 0.75rem;
+  }
+  .name-pill .pill-label {
+    flex: 1; cursor: pointer; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .name-pill .pill-edit-input {
+    flex: 1; min-width: 0; background: var(--panel);
+    border: 1px solid var(--accent); border-radius: 6px;
+    padding: 0.35rem 0.5rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; outline: none;
+  }
+  .name-pill .pill-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
+  .name-pill .pill-icon-btn {
+    width: 26px; height: 26px; flex-shrink: 0;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted);
+    cursor: pointer; font-size: 0.74rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .name-pill .pill-icon-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+  .name-pill .pill-icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,77,0.08); }
+  .name-pill .pill-icon-btn.confirm { border-color: var(--success); color: var(--success); }
+
+  .modal-divider {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin: 1rem 0; font-size: 0.68rem; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .modal-divider::before, .modal-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .modal-input-row { display: flex; gap: 0.5rem; }
+  .modal-input-row input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.75rem 1rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; outline: none;
+  }
+  .modal-input-row input:focus { border-color: var(--accent); }
+  .modal-go-btn {
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #0d0f14; font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+    font-size: 0.85rem; padding: 0 1.1rem; cursor: pointer; transition: all 0.2s;
+  }
+  .modal-go-btn:hover { background: #33dcff; }
+  .modal-go-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+  .modal-status { font-size: 0.72rem; color: var(--muted); margin-top: 0.85rem; text-align: center; }
+  .modal-status.error { color: var(--danger); }
+
+  /* ── CP P2: FILE STATISTICS + MANUAL FIELDS ── */
+  .cp2-section { display: none; margin-bottom: 1.5rem; }
+  .cp2-section.visible { display: block; }
+
+  .cp2-block {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem;
+  }
+  .cp2-block-title {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 1.25rem; font-weight: 600;
+  }
+  .cp2-block-title .rule { width: 18px; height: 1px; background: var(--accent); }
+
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem;
+  }
+  .stat-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.9rem 0.75rem; text-align: center;
+  }
+  .stat-card .stat-value {
+    font-family: 'IBM Plex Mono', monospace; font-size: 1.15rem; font-weight: 600;
+    color: var(--accent); margin-bottom: 0.3rem;
+  }
+  .stat-card .stat-value.is-manual { color: #fb923c; }
+  .stat-card .stat-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .stat-card .stat-tag {
+    display: block; font-size: 0.55rem; color: var(--muted);
+    opacity: 0.6; margin-top: 0.15rem; letter-spacing: 0.08em;
+  }
+
+  .cp2-divider {
+    border: none; border-top: 1px solid var(--border); margin: 1.25rem 0 1rem;
+  }
+  .cp2-subhead {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+  }
+
+  .manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+  .manual-field label small {
+    display: block; font-size: 0.62rem; color: var(--muted);
+    text-transform: none; letter-spacing: 0; font-weight: 400;
+    font-family: 'IBM Plex Sans', sans-serif; margin-top: 0.15rem;
+  }
+
+  @media (max-width: 640px) {
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .manual-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
+
+<!-- ══════════ NAME / USER MODAL ══════════ -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal-card">
+    <h2 id="modalTitle">Who's using this?</h2>
+    <p class="sub" id="modalSub">Loading saved names…</p>
+
+    <div class="name-list" id="nameList"><!-- populated from Firestore --></div>
+
+    <div class="modal-divider" id="modalDivider" style="display:none;">or add new</div>
+
+    <div class="modal-input-row">
+      <input type="text" id="modalNameInput" placeholder="Type your name" autocomplete="off" />
+      <button class="modal-go-btn" id="modalGoBtn" onclick="submitNewName()">Continue</button>
+    </div>
+
+    <p class="modal-status" id="modalStatus"></p>
+  </div>
+</div>
+
 <div class="container">
   <div class="header">
-    <h1>Disputes File Generator</h1>
-    <p>Generate formatted Excel dispute files with correct filenames</p>
+    <div>
+      <h1>Disputes File Generator</h1>
+      <p>Generate formatted Excel dispute files with correct filenames</p>
+    </div>
+    <div class="active-user" id="activeUserBadge" style="display:none;">
+      <span class="avatar" id="activeUserAvatar">?</span>
+      <span class="name" id="activeUserName">—</span>
+      <span class="switch-link" onclick="openUserModal(true)">switch</span>
+    </div>
   </div>
 
   <div class="card">
@@ -352,7 +548,7 @@
       <label>Priority</label>
       <div class="priority-group visible">
         <button class="priority-btn active" data-p="1" onclick="selectPriority(this)">Priority 1</button>
-        <button class="priority-btn" data-p="2" onclick="selectPriority(this)">Priority 2</button>
+        <button class="priority-btn" data-p="2" id="p2btn" onclick="selectPriority(this)">Priority 2</button>
         <button class="priority-btn" data-p="3" id="p3btn" onclick="selectPriority(this)">Priority 3</button>
         <button class="priority-btn" data-p="4" id="p4btn" onclick="selectPriority(this)">Priority 4</button>
       </div>
@@ -365,7 +561,56 @@
         <input type="text" id="cpName" placeholder="Enter Your Name" oninput="updatePreview()" autocomplete="off" />
         <span class="cp-name-default-badge">default: Diovic</span>
       </div>
-      <p class="hint">Leave blank to use <strong style="color:var(--text);">Diovic</strong> as default</p>
+      <p class="hint">Auto-filled from your selected profile. Leave blank to use <strong style="color:var(--text);">Diovic</strong> as default — or <span style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="openUserModal(true)">switch user</span>.</p>
+    </div>
+
+    <!-- ── CP PRIORITY 2: FILE STATISTICS + MANUAL FIELDS ── -->
+    <div class="cp2-section" id="cp2Section">
+
+      <div class="cp2-block">
+        <div class="cp2-block-title"><span class="rule"></span>File Statistics</div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total URLs</div>
+            <span class="stat-tag">auto</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statCategorized">0/0</div>
+            <div class="stat-label">Categorized</div>
+            <span class="stat-tag">auto</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value is-manual" id="statDuplicatesDisplay">0 URL</div>
+            <div class="stat-label">Duplicates</div>
+            <span class="stat-tag">manual</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="statUploaded">0/0</div>
+            <div class="stat-label">Uploaded GD</div>
+            <span class="stat-tag">auto</span>
+          </div>
+        </div>
+
+        <hr class="cp2-divider">
+        <div class="cp2-subhead">Manual Fields</div>
+
+        <div class="manual-grid">
+          <div class="manual-field field" style="margin-bottom:0;">
+            <label>Duplicates <small>Subtracts from uploaded</small></label>
+            <input type="number" id="cp2Duplicates" min="0" value="0" oninput="updatePreview()" />
+          </div>
+          <div class="manual-field field" style="margin-bottom:0;">
+            <label>Tagged as Immutable</label>
+            <input type="number" id="cp2Immutable" min="0" value="0" oninput="updatePreview()" />
+          </div>
+          <div class="manual-field field" style="margin-bottom:0;">
+            <label>Security Category</label>
+            <input type="text" id="cp2SecurityCat" placeholder="None" oninput="updatePreview()" />
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <hr class="divider">
@@ -418,7 +663,7 @@
 
     <button class="btn-generate" id="genBtn" onclick="generate()" disabled>Generate &amp; Download</button>
 
-    <!-- ── WIKI MESSAGE: Checkpoint ── -->
+    <!-- ── WIKI MESSAGE: Checkpoint P1 ── -->
     <div class="wiki-section variant-cp" id="wiki-section-cp">
       <div class="wiki-header">
         <div class="wiki-title">
@@ -456,10 +701,271 @@
 </div>
 
 <script>
+/* ════════════════════════════════════════════
+   FIREBASE SETUP
+   ════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCv9HPl5I4l1WfByGYT4fKiI6D4GBAqY-0",
+  authDomain: "namedispute-bda59.firebaseapp.com",
+  projectId: "namedispute-bda59",
+  storageBucket: "namedispute-bda59.firebasestorage.app",
+  messagingSenderId: "512536798701",
+  appId: "1:512536798701:web:478fcd481cadc151cb33e4",
+  measurementId: "G-47QYHE3TVE"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const USERS_COLLECTION = 'disputeUsers';
+
+let currentUserName = null; // the active selected/typed name for this session
+
+/* ── Load all saved names from Firestore, render as pills in the modal ── */
+async function loadSavedNames() {
+  const listEl   = document.getElementById('nameList');
+  const subEl    = document.getElementById('modalSub');
+  const dividerEl= document.getElementById('modalDivider');
+
+  try {
+    const snap = await db.collection(USERS_COLLECTION).orderBy('name').get();
+
+    if (snap.empty) {
+      subEl.textContent = "No saved names yet — type yours below to get started.";
+      listEl.innerHTML = '';
+      dividerEl.style.display = 'none';
+      return;
+    }
+
+    subEl.textContent = "Select your name, or add a new one.";
+    listEl.innerHTML = '';
+    snap.forEach(doc => {
+      listEl.appendChild(buildNamePill(doc.id, doc.data().name));
+    });
+    dividerEl.style.display = 'flex';
+  } catch (err) {
+    console.error('Failed to load saved names:', err);
+    subEl.textContent = "Couldn't load saved names — you can still type yours below.";
+    listEl.innerHTML = '';
+    dividerEl.style.display = 'none';
+  }
+}
+
+/* ── Build a single name pill with select / edit / delete controls ── */
+function buildNamePill(docId, name) {
+  const pill = document.createElement('div');
+  pill.className = 'name-pill';
+  pill.dataset.docId = docId;
+  pill.dataset.name = name;
+
+  pill.innerHTML = `
+    <span class="avatar">${initials(name)}</span>
+    <span class="pill-label" title="Use this name">${escapeHtml(name)}</span>
+    <div class="pill-actions">
+      <button class="pill-icon-btn" title="Edit name" onclick="event.stopPropagation(); startEditPill(this)">✎</button>
+      <button class="pill-icon-btn danger" title="Remove name" onclick="event.stopPropagation(); deletePill(this)">✕</button>
+    </div>
+  `;
+
+  pill.querySelector('.pill-label').onclick = () => selectExistingName(name);
+  return pill;
+}
+
+/* ── Switch a pill into inline-edit mode ── */
+function startEditPill(btn) {
+  const pill = btn.closest('.name-pill');
+  const oldName = pill.dataset.name;
+
+  const label = pill.querySelector('.pill-label');
+  const actions = pill.querySelector('.pill-actions');
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'pill-edit-input';
+  input.value = oldName;
+  label.replaceWith(input);
+  input.focus();
+  input.select();
+
+  actions.innerHTML = `
+    <button class="pill-icon-btn confirm" title="Save">✓</button>
+    <button class="pill-icon-btn danger" title="Cancel">✕</button>
+  `;
+  const [saveBtn, cancelBtn] = actions.querySelectorAll('.pill-icon-btn');
+
+  const finishEdit = (commit) => {
+    if (commit) {
+      const newName = input.value.trim();
+      if (newName && newName !== oldName) {
+        renameSavedUser(pill.dataset.docId, oldName, newName);
+        return; // renameSavedUser reloads the list
+      }
+    }
+    loadSavedNames(); // revert / refresh either way
+  };
+
+  saveBtn.onclick = (e) => { e.stopPropagation(); finishEdit(true); };
+  cancelBtn.onclick = (e) => { e.stopPropagation(); finishEdit(false); };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') finishEdit(true);
+    if (e.key === 'Escape') finishEdit(false);
+  });
+}
+
+/* ── Rename: write new doc, delete old doc (since doc ID is derived from name) ── */
+async function renameSavedUser(oldDocId, oldName, newName) {
+  const newDocId = newName.trim().toLowerCase().replace(/\s+/g, '-');
+  try {
+    await db.collection(USERS_COLLECTION).doc(newDocId).set({
+      name: newName.trim(),
+      lastUsed: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    if (newDocId !== oldDocId) {
+      await db.collection(USERS_COLLECTION).doc(oldDocId).delete();
+    }
+    // If the renamed user is the currently active one, update everywhere live
+    if (currentUserName === oldName) {
+      setActiveUser(newName.trim());
+    }
+  } catch (err) {
+    console.error('Failed to rename user:', err);
+  }
+  loadSavedNames();
+}
+
+/* ── Delete a saved name from Firestore ── */
+async function deletePill(btn) {
+  const pill = btn.closest('.name-pill');
+  const docId = pill.dataset.docId;
+  const name = pill.dataset.name;
+
+  // Simple inline confirm: first click arms it, second click within the pill confirms
+  if (!btn.classList.contains('confirm-armed')) {
+    btn.classList.add('confirm-armed');
+    btn.title = 'Click again to confirm';
+    btn.style.borderColor = 'var(--danger)';
+    btn.style.color = 'var(--danger)';
+    setTimeout(() => {
+      btn.classList.remove('confirm-armed');
+      btn.title = 'Remove name';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }, 2500);
+    return;
+  }
+
+  try {
+    await db.collection(USERS_COLLECTION).doc(docId).delete();
+  } catch (err) {
+    console.error('Failed to delete user:', err);
+  }
+
+  if (currentUserName === name) {
+    currentUserName = null;
+    localStorage.removeItem('disputes_active_user');
+    document.getElementById('activeUserBadge').style.display = 'none';
+    document.getElementById('cpName').value = '';
+  }
+
+  loadSavedNames();
+}
+
+function initials(name) {
+  return name.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/* ── Save a (new) name to Firestore, deduped by lowercase name ── */
+async function saveNameToFirestore(name) {
+  const id = name.trim().toLowerCase().replace(/\s+/g, '-');
+  try {
+    await db.collection(USERS_COLLECTION).doc(id).set({
+      name: name.trim(),
+      lastUsed: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.error('Failed to save name:', err);
+  }
+}
+
+/* ── User picked an existing pill ── */
+function selectExistingName(name) {
+  setActiveUser(name);
+  saveNameToFirestore(name); // bump lastUsed
+  closeUserModal();
+}
+
+/* ── User typed a brand-new name ── */
+function submitNewName() {
+  const input = document.getElementById('modalNameInput');
+  const statusEl = document.getElementById('modalStatus');
+  const name = input.value.trim();
+
+  if (!name) {
+    statusEl.textContent = 'Please enter a name first.';
+    statusEl.classList.add('error');
+    return;
+  }
+  statusEl.textContent = '';
+  statusEl.classList.remove('error');
+
+  setActiveUser(name);
+  saveNameToFirestore(name);
+  closeUserModal();
+}
+
+/* ── Set the active user for this session + reflect everywhere ── */
+function setActiveUser(name) {
+  currentUserName = name;
+  localStorage.setItem('disputes_active_user', name);
+
+  const badge = document.getElementById('activeUserBadge');
+  badge.style.display = 'flex';
+  document.getElementById('activeUserAvatar').textContent = initials(name);
+  document.getElementById('activeUserName').textContent = name;
+
+  // Auto-fill (and lock-in) the Checkpoint name field
+  const cpNameInput = document.getElementById('cpName');
+  cpNameInput.value = name;
+
+  updatePreview();
+}
+
+/* ── Modal open/close ── */
+function openUserModal(isSwitch) {
+  document.getElementById('modalTitle').textContent = isSwitch ? 'Switch user' : "Who's using this?";
+  document.getElementById('modalNameInput').value = '';
+  document.getElementById('modalStatus').textContent = '';
+  document.getElementById('modalStatus').classList.remove('error');
+  document.getElementById('userModal').classList.remove('hidden');
+  loadSavedNames();
+}
+
+function closeUserModal() {
+  document.getElementById('userModal').classList.add('hidden');
+}
+
+// Allow pressing Enter in the modal input
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('modalNameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitNewName();
+  });
+});
+
+/* ════════════════════════════════════════════
+   APP LOGIC (existing functionality)
+   ════════════════════════════════════════════ */
 let selectedPriority = 1;
 let mode = 'single';
 
-window.addEventListener('DOMContentLoaded', () => addRow());
+window.addEventListener('DOMContentLoaded', () => {
+  addRow();
+  openUserModal(false); // always ask on open; pre-fills with last-used if you want to skip, see note below
+});
 
 // ── VENDOR ──
 function onVendorChange() {
@@ -469,6 +975,8 @@ function onVendorChange() {
   const showPriority = ['microsoft', 'os', 'checkpoint', 'fs'].includes(v);
   document.getElementById('priorityField').style.display = showPriority ? 'block' : 'none';
 
+  // Priority 2 button visible for: microsoft, fs (NOT checkpoint — Checkpoint has no Priority 2)
+  document.getElementById('p2btn').style.display = ['microsoft', 'fs'].includes(v) ? '' : 'none';
   // Priority 3 button visible for: microsoft, checkpoint, fs
   document.getElementById('p3btn').style.display = ['microsoft', 'checkpoint', 'fs'].includes(v) ? '' : 'none';
   // Priority 4 button visible for: checkpoint, fs
@@ -489,6 +997,10 @@ function onVendorChange() {
 }
 
 function selectPriority(btn) {
+  // Checkpoint has no Priority 2 — ignore attempts to select it for Checkpoint
+  const v = document.getElementById('vendor').value;
+  if (v === 'checkpoint' && btn.dataset.p === '2') return;
+
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selectedPriority = parseInt(btn.dataset.p);
@@ -581,7 +1093,7 @@ function pad(n) { return String(n).padStart(2, '0'); }
 
 function getCpName() {
   const raw = document.getElementById('cpName').value.trim();
-  return raw || 'Diovic';
+  return raw || currentUserName || 'Diovic';
 }
 
 // Extract just the date part (first 8 chars) from a timestamp like 20260506T123000
