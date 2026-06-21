@@ -429,6 +429,56 @@
   .modal-status { font-size: 0.72rem; color: var(--muted); margin-top: 0.85rem; text-align: center; }
   .modal-status.error { color: var(--danger); }
 
+  /* ── CONFIRM DIALOG (delete / rename) ── */
+  .confirm-overlay {
+    position: fixed; inset: 0; background: rgba(5,6,10,0.88);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1100; backdrop-filter: blur(3px);
+  }
+  .confirm-overlay.hidden { display: none; }
+  .confirm-card {
+    width: 100%; max-width: 360px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.5rem;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  }
+  .confirm-card h3 {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem;
+    color: var(--text); letter-spacing: 0.02em; margin-bottom: 0.5rem;
+  }
+  .confirm-card p {
+    font-size: 0.8rem; color: var(--muted); line-height: 1.5; margin-bottom: 1.25rem;
+  }
+  .confirm-card p strong { color: var(--text); }
+  .confirm-actions { display: flex; gap: 0.6rem; }
+  .confirm-btn {
+    flex: 1; padding: 0.65rem; border-radius: 8px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; border: 1px solid var(--border);
+  }
+  .confirm-btn.cancel { background: transparent; color: var(--muted); }
+  .confirm-btn.cancel:hover { border-color: var(--text); color: var(--text); }
+  .confirm-btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .confirm-btn.danger:hover { background: #ff6b6b; }
+  .confirm-btn.primary { background: var(--accent); color: #0d0f14; border-color: var(--accent); }
+  .confirm-btn.primary:hover { background: #33dcff; }
+  .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── LOCKED NAME FIELD (name already chosen — Checkpoint P1) ── */
+  .cp-name-inner input[readonly] {
+    color: var(--muted); cursor: not-allowed; border-color: var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .cp-name-locked-badge {
+    position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;
+    color: var(--accent); background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.25); border-radius: 20px;
+    padding: 0.1rem 0.55rem; pointer-events: none; display: none;
+  }
+  .cp-name-inner.locked .cp-name-locked-badge { display: inline-block; }
+  .cp-name-inner.locked .cp-name-default-badge { display: none; }
+
   /* ── CP P2: FILE STATISTICS + MANUAL FIELDS ── */
   .cp2-section { display: none; margin-bottom: 1.5rem; }
   .cp2-section.visible { display: block; }
@@ -509,6 +559,18 @@
   </div>
 </div>
 
+<!-- ══════════ CONFIRM DIALOG (delete / rename) ══════════ -->
+<div class="confirm-overlay hidden" id="confirmOverlay">
+  <div class="confirm-card">
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p id="confirmMessage">This action cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" id="confirmCancelBtn" onclick="closeConfirmDialog()">Cancel</button>
+      <button class="confirm-btn danger" id="confirmOkBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
   <div class="header">
     <div>
@@ -557,11 +619,12 @@
     <!-- Checkpoint Name -->
     <div class="cp-name-field" id="cpNameField">
       <label>Your Name <span style="color:var(--accent);font-size:0.65rem;letter-spacing:0.05em;text-transform:none;font-family:'IBM Plex Sans',sans-serif;">(used in filename)</span></label>
-      <div class="cp-name-inner">
+      <div class="cp-name-inner" id="cpNameInner">
         <input type="text" id="cpName" placeholder="Enter Your Name" oninput="updatePreview()" autocomplete="off" />
         <span class="cp-name-default-badge">default: Diovic</span>
+        <span class="cp-name-locked-badge">🔒 locked</span>
       </div>
-      <p class="hint">Auto-filled from your selected profile. Leave blank to use <strong style="color:var(--text);">Diovic</strong> as default — or <span style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="openUserModal(true)">switch user</span>.</p>
+      <p class="hint" id="cpNameHint">Auto-filled from your selected profile. Leave blank to use <strong style="color:var(--text);">Diovic</strong> as default — or <span style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="openUserModal(true)">switch user</span>.</p>
     </div>
 
     <!-- ── CP PRIORITY 2: FILE STATISTICS + MANUAL FIELDS ── -->
@@ -720,7 +783,50 @@ const USERS_COLLECTION = 'disputeUsers';
 
 let currentUserName = null; // the active selected/typed name for this session
 
-/* ── Load all saved names from Firestore, render as pills in the modal ── */
+/* ── Generic confirm dialog (used for delete + rename) ── */
+let _confirmResolveAction = null;
+
+function showConfirmDialog({ title, message, okLabel, okClass, onConfirm, onCancel }) {
+  const overlay   = document.getElementById('confirmOverlay');
+  const titleEl   = document.getElementById('confirmTitle');
+  const msgEl     = document.getElementById('confirmMessage');
+  const okBtn     = document.getElementById('confirmOkBtn');
+  const cancelBtn = document.getElementById('confirmCancelBtn');
+
+  titleEl.textContent = title || 'Are you sure?';
+  msgEl.innerHTML = message || 'This action cannot be undone.';
+
+  okBtn.textContent = okLabel || 'Confirm';
+  okBtn.className = 'confirm-btn ' + (okClass || 'danger');
+
+  _confirmResolveAction = { onConfirm, onCancel };
+
+  okBtn.onclick = async () => {
+    okBtn.disabled = true;
+    cancelBtn.disabled = true;
+    try {
+      if (_confirmResolveAction && _confirmResolveAction.onConfirm) {
+        await _confirmResolveAction.onConfirm();
+      }
+    } finally {
+      okBtn.disabled = false;
+      cancelBtn.disabled = false;
+      closeConfirmDialog(true);
+    }
+  };
+
+  overlay.classList.remove('hidden');
+}
+
+function closeConfirmDialog(skipCancelCallback) {
+  const overlay = document.getElementById('confirmOverlay');
+  overlay.classList.add('hidden');
+  if (!skipCancelCallback && _confirmResolveAction && _confirmResolveAction.onCancel) {
+    _confirmResolveAction.onCancel();
+  }
+  _confirmResolveAction = null;
+}
+
 async function loadSavedNames() {
   const listEl   = document.getElementById('nameList');
   const subEl    = document.getElementById('modalSub');
@@ -796,8 +902,15 @@ function startEditPill(btn) {
     if (commit) {
       const newName = input.value.trim();
       if (newName && newName !== oldName) {
-        renameSavedUser(pill.dataset.docId, oldName, newName);
-        return; // renameSavedUser reloads the list
+        showConfirmDialog({
+          title: 'Rename this profile?',
+          message: `Rename <strong>${escapeHtml(oldName)}</strong> to <strong>${escapeHtml(newName)}</strong>? This updates the saved name in the database.`,
+          okLabel: 'Rename',
+          okClass: 'primary',
+          onConfirm: () => renameSavedUser(pill.dataset.docId, oldName, newName),
+          onCancel: () => loadSavedNames()
+        });
+        return; // dialog drives the next step
       }
     }
     loadSavedNames(); // revert / refresh either way
@@ -832,41 +945,35 @@ async function renameSavedUser(oldDocId, oldName, newName) {
   loadSavedNames();
 }
 
-/* ── Delete a saved name from Firestore ── */
-async function deletePill(btn) {
+/* ── Delete a saved name from Firestore (with confirmation) ── */
+function deletePill(btn) {
   const pill = btn.closest('.name-pill');
   const docId = pill.dataset.docId;
   const name = pill.dataset.name;
 
-  // Simple inline confirm: first click arms it, second click within the pill confirms
-  if (!btn.classList.contains('confirm-armed')) {
-    btn.classList.add('confirm-armed');
-    btn.title = 'Click again to confirm';
-    btn.style.borderColor = 'var(--danger)';
-    btn.style.color = 'var(--danger)';
-    setTimeout(() => {
-      btn.classList.remove('confirm-armed');
-      btn.title = 'Remove name';
-      btn.style.borderColor = '';
-      btn.style.color = '';
-    }, 2500);
-    return;
-  }
+  showConfirmDialog({
+    title: 'Remove this name?',
+    message: `Are you sure you want to remove <strong>${escapeHtml(name)}</strong>? This will permanently delete it from the database.`,
+    okLabel: 'Remove',
+    okClass: 'danger',
+    onConfirm: async () => {
+      try {
+        await db.collection(USERS_COLLECTION).doc(docId).delete();
+      } catch (err) {
+        console.error('Failed to delete user:', err);
+      }
 
-  try {
-    await db.collection(USERS_COLLECTION).doc(docId).delete();
-  } catch (err) {
-    console.error('Failed to delete user:', err);
-  }
+      if (currentUserName === name) {
+        currentUserName = null;
+        localStorage.removeItem('disputes_active_user');
+        document.getElementById('activeUserBadge').style.display = 'none';
+        document.getElementById('cpName').value = '';
+        setCpNameLocked(false);
+      }
 
-  if (currentUserName === name) {
-    currentUserName = null;
-    localStorage.removeItem('disputes_active_user');
-    document.getElementById('activeUserBadge').style.display = 'none';
-    document.getElementById('cpName').value = '';
-  }
-
-  loadSavedNames();
+      loadSavedNames();
+    }
+  });
 }
 
 function initials(name) {
@@ -931,8 +1038,22 @@ function setActiveUser(name) {
   // Auto-fill (and lock-in) the Checkpoint name field
   const cpNameInput = document.getElementById('cpName');
   cpNameInput.value = name;
+  setCpNameLocked(true);
 
   updatePreview();
+}
+
+/* ── Lock/unlock the "Your Name" field. Locked once a profile is active,
+   since the name should come from "switch user", not free typing. ── */
+function setCpNameLocked(locked) {
+  const input = document.getElementById('cpName');
+  const inner = document.getElementById('cpNameInner');
+  const hint  = document.getElementById('cpNameHint');
+  input.readOnly = locked;
+  inner.classList.toggle('locked', locked);
+  hint.innerHTML = locked
+    ? `Name is locked to your active profile — <span style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="openUserModal(true)">switch user</span> to change it.`
+    : `Auto-filled from your selected profile. Leave blank to use <strong style="color:var(--text);">Diovic</strong> as default — or <span style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="openUserModal(true)">switch user</span>.`;
 }
 
 /* ── Modal open/close ── */
