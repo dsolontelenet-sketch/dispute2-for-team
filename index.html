@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -212,7 +213,9 @@
   }
   .url-row .inp-seccat:focus { border-color: #fb923c; }
   .url-row .inp-seccat::placeholder { color: rgba(251,146,60,0.4); }
-  .url-row .inp-seccat.has-error { border-color: var(--danger); box-shadow: 0 0 0 1px rgba(255,77,77,0.3); }
+  .url-row .inp-seccat.has-error,
+  .url-row .inp-cat.has-error,
+  .url-row .inp-sec.has-error { border-color: var(--danger); box-shadow: 0 0 0 1px rgba(255,77,77,0.3); }
 
   .url-del {
     width: 28px; height: 28px; flex-shrink: 0;
@@ -1268,23 +1271,47 @@ function getUrls() {
 
 // Rows (single mode only) where Primary = 20079 but Security Category is blank.
 // These block generation until fixed.
+// Returns { missingPrimary: [rowNum,...], missing20079Security: [rowNum,...] }
+// Rule 1 (existing): Primary = 20079 requires Security (col D) to be filled.
+// Rule 2 (new):      Secondary (col C) or Security (col D) filled requires Primary (col B) to be filled.
+//                     If Primary, Secondary, and Security are ALL blank, the row is valid (generates as template default).
 function getInvalidRows() {
-  if (mode !== 'single') return [];
+  if (mode !== 'single') return { missingPrimary: [], missing20079Security: [] };
   const rows = Array.from(document.querySelectorAll('#url-rows .url-row'));
-  const bad = [];
+  const missingPrimary = [];
+  const missing20079Security = [];
+
   rows.forEach((row, i) => {
     const url = cleanUrl(row.querySelector('.inp-url').value);
+    const catInput    = row.querySelector('.inp-cat');
+    const secInput    = row.querySelector('.inp-sec');
+    const secCatInput = row.querySelector('.inp-seccat');
+
+    catInput.classList.remove('has-error');
+    secInput.classList.remove('has-error');
+    secCatInput.classList.remove('has-error');
+
     if (!url) return;
-    const catRaw = row.querySelector('.inp-cat').value.trim();
-    const secCatRaw = row.querySelector('.inp-seccat').value.trim();
+
+    const catRaw    = catInput.value.trim();
+    const secRaw    = secInput.value.trim();
+    const secCatRaw = secCatInput.value.trim();
+
+    // Rule 2: Secondary or Security filled, but Primary blank → block, warn on the Primary box.
+    if (catRaw === '' && (secRaw !== '' || secCatRaw !== '')) {
+      missingPrimary.push(i + 1);
+      catInput.classList.add('has-error');
+      return; // don't also evaluate rule 1 when Primary isn't even filled
+    }
+
+    // Rule 1: Primary = 20079 requires Security (col D).
     if (catRaw === '20079' && secCatRaw === '') {
-      bad.push(i + 1);
-      row.querySelector('.inp-seccat').classList.add('has-error');
-    } else {
-      row.querySelector('.inp-seccat').classList.remove('has-error');
+      missing20079Security.push(i + 1);
+      secCatInput.classList.add('has-error');
     }
   });
-  return bad;
+
+  return { missingPrimary, missing20079Security };
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
@@ -1388,6 +1415,7 @@ function updatePreview() {
   const acc     = document.getElementById('accepted').value.trim();
   const name    = getCpName();
   const invalid = getInvalidRows();
+  const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
 
   document.getElementById('url-badge').textContent = rows.length + (rows.length === 1 ? ' URL' : ' URLs');
 
@@ -1396,9 +1424,16 @@ function updatePreview() {
   const btn        = document.getElementById('genBtn');
   const banner     = document.getElementById('validation-banner');
 
-  if (invalid.length > 0) {
+  if (hasInvalid) {
+    const msgs = [];
+    if (invalid.missingPrimary.length > 0) {
+      msgs.push(`⚠ Row${invalid.missingPrimary.length > 1 ? 's' : ''} ${invalid.missingPrimary.join(', ')}: Secondary or Security was entered, so Primary (col B) is required before you can generate the file.`);
+    }
+    if (invalid.missing20079Security.length > 0) {
+      msgs.push(`⚠ Row${invalid.missing20079Security.length > 1 ? 's' : ''} ${invalid.missing20079Security.join(', ')}: Primary code 20079 requires a Security Category (col D) before you can generate the file.`);
+    }
     banner.classList.add('visible');
-    banner.textContent = `⚠ Row${invalid.length > 1 ? 's' : ''} ${invalid.join(', ')}: Primary code 20079 requires a Security Category (col D) before you can generate the file.`;
+    banner.innerHTML = msgs.join('<br>');
   } else {
     banner.classList.remove('visible');
     banner.textContent = '';
@@ -1418,7 +1453,7 @@ function updatePreview() {
     } else {
       previewSub.textContent = 'No URLs entered yet';
     }
-    btn.disabled = rows.length === 0 || invalid.length > 0;
+    btn.disabled = rows.length === 0 || hasInvalid;
   } else {
     previewFn.textContent  = '—';
     previewSub.textContent = '';
@@ -1477,16 +1512,20 @@ function copyWiki(vendor) {
 
 // ── GENERATE ──
 // Column layout: A=URL, B=Primary, C=Secondary, D=Security Category, E=Immutable flag, F=template tail
-//  - Col B (Primary): if not provided, falls back to null (unchanged from before)
+//  - If Primary, Secondary, and Security are ALL blank → row generates exactly like the template default
+//    (col B blank, col C blank, col D = 99999, col E = "Immutable").
+//  - Col B (Primary): if not provided, falls back to null
 //  - Col C (Secondary): only written if the user provided a value; otherwise null
 //  - Col D (Security Category): if provided, it's written AND Col E ("Immutable") is cleared (blank)
 //                                if not provided, Col D stays 99999 (template default) and Col E keeps "Immutable"
-//  - Primary = 20079 requires Col D to be filled — enforced before this runs (see getInvalidRows)
+//  - Rule: if Secondary or Security is filled, Primary becomes required — enforced before this runs (getInvalidRows)
+//  - Rule: Primary = 20079 requires Col D to be filled — enforced before this runs (getInvalidRows)
 function generate() {
   const fn      = getFilename();
   const rows    = getUrls();
   const invalid = getInvalidRows();
-  if (!fn || !rows.length || invalid.length > 0) return;
+  const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
+  if (!fn || !rows.length || hasInvalid) return;
 
   const wb = XLSX.utils.book_new();
 
