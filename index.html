@@ -815,9 +815,8 @@ async function saveNameToFirestore(name) {
 
 /* ════════════════════════════════════════════
    "YOUR NAME" DROPDOWN / COMBOBOX
-   (Checkpoint Priority 1 only — replaces the old startup modal)
    ════════════════════════════════════════════ */
-let savedNames = [];        // cache: [{ id, name }, ...]
+let savedNames = [];
 let nameComboOpen = false;
 
 async function loadNamesCache() {
@@ -880,7 +879,7 @@ function buildComboPill(docId, name) {
 
 function selectComboName(name) {
   document.getElementById('cpName').value = name;
-  saveNameToFirestore(name); // bump lastUsed
+  saveNameToFirestore(name);
   closeNameDropdown();
   updatePreview();
 }
@@ -911,18 +910,11 @@ function closeNameDropdown() {
   document.getElementById('nameComboDropdown').classList.remove('open');
 }
 
-function toggleNameDropdown(e) {
-  if (e) e.stopPropagation();
-  nameComboOpen ? closeNameDropdown() : openNameDropdown();
-}
-
-// Close the dropdown when clicking anywhere outside of it
 document.addEventListener('click', (e) => {
   const wrap = document.getElementById('cpNameInner');
   if (wrap && !wrap.contains(e.target)) closeNameDropdown();
 });
 
-/* ── Switch a pill (inside the dropdown) into inline-edit mode ── */
 function startEditCombo(btn) {
   const pill = btn.closest('.name-pill');
   const oldName = pill.dataset.name;
@@ -957,10 +949,10 @@ function startEditCombo(btn) {
           onConfirm: () => renameSavedUser(pill.dataset.docId, oldName, newName),
           onCancel: () => renderNameComboList()
         });
-        return; // dialog drives the next step
+        return;
       }
     }
-    renderNameComboList(); // revert / refresh either way
+    renderNameComboList();
   };
 
   saveBtn.onclick = (e) => { e.stopPropagation(); finishEdit(true); };
@@ -971,7 +963,6 @@ function startEditCombo(btn) {
   });
 }
 
-/* ── Rename: write new doc, delete old doc (since doc ID is derived from name) ── */
 async function renameSavedUser(oldDocId, oldName, newName) {
   const newDocId = newName.trim().toLowerCase().replace(/\s+/g, '-');
   try {
@@ -982,7 +973,6 @@ async function renameSavedUser(oldDocId, oldName, newName) {
     if (newDocId !== oldDocId) {
       await db.collection(USERS_COLLECTION).doc(oldDocId).delete();
     }
-    // If the name field currently shows the renamed name, update it live
     const cpInput = document.getElementById('cpName');
     if (cpInput.value.trim() === oldName) {
       cpInput.value = newName.trim();
@@ -994,7 +984,6 @@ async function renameSavedUser(oldDocId, oldName, newName) {
   await loadNamesCache();
 }
 
-/* ── Delete a saved name from Firestore (with confirmation) ── */
 function deleteComboName(btn) {
   const pill = btn.closest('.name-pill');
   const docId = pill.dataset.docId;
@@ -1025,57 +1014,72 @@ function deleteComboName(btn) {
 }
 
 /* ════════════════════════════════════════════
-   APP LOGIC (existing functionality)
+   VENDOR PRIORITY CONFIG
+   Defines which priority buttons are shown and
+   which priority is the default for each vendor.
+   ════════════════════════════════════════════ */
+const VENDOR_CONFIG = {
+  barracuda:     { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
+  zo:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  az:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  checkpoint:    { showPriority: true,  availablePriorities: [1,3,4],     defaultPriority: 1 },
+  microsoft:     { showPriority: true,  availablePriorities: [1,2,3],     defaultPriority: 1 },
+  os:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  is:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  tw:            { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
+  so:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  fs:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  partnerportal: { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
+};
+
+/* ════════════════════════════════════════════
+   APP LOGIC
    ════════════════════════════════════════════ */
 let selectedPriority = 1;
 let mode = 'single';
 
 window.addEventListener('DOMContentLoaded', () => {
   addRow();
-  loadNamesCache(); // load saved names quietly in the background — no startup modal
+  loadNamesCache();
 });
 
 // ── VENDOR ──
 function onVendorChange() {
   const v = document.getElementById('vendor').value;
+  const cfg = VENDOR_CONFIG[v] || { showPriority: false, availablePriorities: [], defaultPriority: 1 };
 
-  // Vendors that show a priority selector.
-  // OS is intentionally excluded here: OS only ever uses Priority 2, so there is
-  // nothing to choose — we just force it below and keep the selector hidden to
-  // avoid a confusing UI where "Priority 1" looks selectable/active.
-  const showPriority = ['microsoft', 'checkpoint', 'fs'].includes(v);
-  document.getElementById('priorityField').style.display = showPriority ? 'block' : 'none';
+  // Show/hide priority field
+  document.getElementById('priorityField').style.display = cfg.showPriority ? 'block' : 'none';
 
-  // Priority 2 button visible for: microsoft, fs (NOT checkpoint — Checkpoint has no Priority 2)
-  document.getElementById('p2btn').style.display = ['microsoft', 'fs'].includes(v) ? '' : 'none';
-  // Priority 3 button visible for: microsoft, checkpoint, fs
-  document.getElementById('p3btn').style.display = ['microsoft', 'checkpoint', 'fs'].includes(v) ? '' : 'none';
-  // Priority 4 button visible for: checkpoint, fs
-  document.getElementById('p4btn').style.display = ['checkpoint', 'fs'].includes(v) ? '' : 'none';
+  // Show/hide individual priority buttons based on vendor config
+  [1, 2, 3, 4].forEach(p => {
+    const btn = document.querySelector(`.priority-btn[data-p="${p}"]`);
+    if (btn) {
+      btn.style.display = cfg.availablePriorities.includes(p) ? '' : 'none';
+    }
+  });
 
-  // Reset priority whenever vendor changes — OS is always forced to Priority 2,
-  // everything else defaults back to Priority 1.
+  // Reset all buttons, then activate the default priority
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
-  if (v === 'os') {
-    document.querySelector('[data-p="2"]').classList.add('active');
-    selectedPriority = 2;
-  } else {
-    document.querySelector('[data-p="1"]').classList.add('active');
-    selectedPriority = 1;
-  }
+  selectedPriority = cfg.defaultPriority;
+  const defaultBtn = document.querySelector(`.priority-btn[data-p="${selectedPriority}"]`);
+  if (defaultBtn) defaultBtn.classList.add('active');
 
   updateCpNameVisibility();
   updatePreview();
 }
 
 function selectPriority(btn) {
-  // Checkpoint has no Priority 2 — ignore attempts to select it for Checkpoint
   const v = document.getElementById('vendor').value;
-  if (v === 'checkpoint' && btn.dataset.p === '2') return;
+  const cfg = VENDOR_CONFIG[v] || { availablePriorities: [] };
+  const p = parseInt(btn.dataset.p);
+
+  // Only allow selecting priorities that are available for this vendor
+  if (!cfg.availablePriorities.includes(p)) return;
 
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  selectedPriority = parseInt(btn.dataset.p);
+  selectedPriority = p;
   updateCpNameVisibility();
   updatePreview();
 }
@@ -1142,14 +1146,10 @@ function reindex() {
   });
 }
 
-// Primary category code 20079 requires a Security Category entry.
-// This just re-runs validation/preview; the actual block happens in getUrls()/generate().
 function onCatInput(input) {
   updatePreview();
 }
 
-// Typing into Security Category (col D) — just re-render; the "remove Immutable" effect
-// is purely about the generated file content (col E), not about clearing other inputs.
 function onSecurityInput(input) {
   updatePreview();
 }
@@ -1178,18 +1178,12 @@ function getUrls() {
       const secCatRaw = row.querySelector('.inp-seccat').value.trim();
       const cat    = catRaw !== '' ? Number(catRaw) : null;
       const sec    = secRaw !== '' ? Number(secRaw) : null;
-      const secCat = secCatRaw; // kept as string, blank means "not provided"
+      const secCat = secCatRaw;
       return { url, cat, sec, secCat };
     })
     .filter(r => r.url);
 }
 
-// Rows (single mode only) where Primary = 20079 but Security Category is blank.
-// These block generation until fixed.
-// Returns { missingPrimary: [rowNum,...], missing20079Security: [rowNum,...] }
-// Rule 1 (existing): Primary = 20079 requires Security (col D) to be filled.
-// Rule 2 (new):      Secondary (col C) or Security (col D) filled requires Primary (col B) to be filled.
-//                     If Primary, Secondary, and Security are ALL blank, the row is valid (generates as template default).
 function getInvalidRows() {
   if (mode !== 'single') return { missingPrimary: [], missing20079Security: [] };
   const rows = Array.from(document.querySelectorAll('#url-rows .url-row'));
@@ -1212,14 +1206,12 @@ function getInvalidRows() {
     const secRaw    = secInput.value.trim();
     const secCatRaw = secCatInput.value.trim();
 
-    // Rule 2: Secondary or Security filled, but Primary blank → block, warn on the Primary box.
     if (catRaw === '' && (secRaw !== '' || secCatRaw !== '')) {
       missingPrimary.push(i + 1);
       catInput.classList.add('has-error');
-      return; // don't also evaluate rule 1 when Primary isn't even filled
+      return;
     }
 
-    // Rule 1: Primary = 20079 requires Security (col D).
     if (catRaw === '20079' && secCatRaw === '') {
       missing20079Security.push(i + 1);
       secCatInput.classList.add('has-error');
@@ -1236,34 +1228,62 @@ function getCpName() {
   return raw || 'Diovic';
 }
 
-// Extract just the date part (first 8 chars) from a timestamp like 20260506T123000
 function dateOnly(acc) {
   return acc.replace('T', '').substring(0, 8);
 }
 
 // ── FILENAME ──
+// Vendors with priority: ZO, AZ, OS, IS, SO all follow the pattern:
+//   "Disputes Priority {N} {VENDOR_LABEL} accepted at {ACC}"
+// Special cases remain unchanged (Checkpoint, Microsoft, Barracuda, TW, FS, Partner Portal).
 function getFilename() {
   const v   = document.getElementById('vendor').value;
   const acc = document.getElementById('accepted').value.trim();
   if (!v || !acc) return null;
-  if (v === 'barracuda')     return `Disputes Priority 1 Barracuda accepted at ${acc}`;
-  if (v === 'zo')            return `Disputes Priority 1 ZO accepted at ${acc}`;
-  if (v === 'az')            return `Disputes Priority 1 AZ accepted at ${acc}`;
-  if (v === 'checkpoint')    return selectedPriority === 1
-    ? `Disputes Priority 1 Checkpoint ${acc} ${getCpName()}`
-    : `Disputes Priority ${selectedPriority} Checkpoint ${acc}`;
-  if (v === 'os')            return `Disputes Priority 2 OS accepted at ${acc}`;
-  if (v === 'is')            return `Disputes Priority 1 IS accepted at ${acc}`;
-  if (v === 'tw')            return `Disputes Priority 1 TW accepted at ${acc}`;
-  if (v === 'so')            return `Disputes Priority 4 SO accepted at ${acc}`;
-  if (v === 'fs')            return `Disputes Priority ${selectedPriority} FS accepted at ${acc}`;
-  if (v === 'partnerportal') return `P1 dispute Partner Portal ${acc}`;
-  if (v === 'microsoft') {
-    return selectedPriority === 1
-      ? `Disputes Priority 1 Microsoft ${acc}`
-      : `Disputes Priority ${selectedPriority} Microsoft accepted at ${acc}`;
+
+  const p = selectedPriority;
+
+  switch (v) {
+    case 'barracuda':
+      return `Disputes Priority 1 Barracuda accepted at ${acc}`;
+
+    case 'zo':
+      return `Disputes Priority ${p} ZO accepted at ${acc}`;
+
+    case 'az':
+      return `Disputes Priority ${p} AZ accepted at ${acc}`;
+
+    case 'checkpoint':
+      return p === 1
+        ? `Disputes Priority 1 Checkpoint ${acc} ${getCpName()}`
+        : `Disputes Priority ${p} Checkpoint ${acc}`;
+
+    case 'microsoft':
+      return p === 1
+        ? `Disputes Priority 1 Microsoft ${acc}`
+        : `Disputes Priority ${p} Microsoft accepted at ${acc}`;
+
+    case 'os':
+      return `Disputes Priority ${p} OS accepted at ${acc}`;
+
+    case 'is':
+      return `Disputes Priority ${p} IS accepted at ${acc}`;
+
+    case 'tw':
+      return `Disputes Priority 1 TW accepted at ${acc}`;
+
+    case 'so':
+      return `Disputes Priority ${p} SO accepted at ${acc}`;
+
+    case 'fs':
+      return `Disputes Priority ${p} FS accepted at ${acc}`;
+
+    case 'partnerportal':
+      return `P1 dispute Partner Portal ${acc}`;
+
+    default:
+      return null;
   }
-  return null;
 }
 
 // ── WIKI: CHECKPOINT (plain text for clipboard) ──
@@ -1426,15 +1446,6 @@ function copyWiki(vendor) {
 }
 
 // ── GENERATE ──
-// Column layout: A=URL, B=Primary, C=Secondary, D=Security Category, E=Immutable flag, F=template tail
-//  - If Primary, Secondary, and Security are ALL blank → row generates exactly like the template default
-//    (col B blank, col C blank, col D = 99999, col E = "Immutable").
-//  - Col B (Primary): if not provided, falls back to null
-//  - Col C (Secondary): only written if the user provided a value; otherwise null
-//  - Col D (Security Category): if provided, it's written AND Col E ("Immutable") is cleared (blank)
-//                                if not provided, Col D stays 99999 (template default) and Col E keeps "Immutable"
-//  - Rule: if Secondary or Security is filled, Primary becomes required — enforced before this runs (getInvalidRows)
-//  - Rule: Primary = 20079 requires Col D to be filled — enforced before this runs (getInvalidRows)
 function generate() {
   const fn      = getFilename();
   const rows    = getUrls();
