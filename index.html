@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1038,8 +1039,11 @@ window.addEventListener('DOMContentLoaded', () => {
 function onVendorChange() {
   const v = document.getElementById('vendor').value;
 
-  // Vendors that show a priority selector
-  const showPriority = ['microsoft', 'os', 'checkpoint', 'fs'].includes(v);
+  // Vendors that show a priority selector.
+  // OS is intentionally excluded here: OS only ever uses Priority 2, so there is
+  // nothing to choose — we just force it below and keep the selector hidden to
+  // avoid a confusing UI where "Priority 1" looks selectable/active.
+  const showPriority = ['microsoft', 'checkpoint', 'fs'].includes(v);
   document.getElementById('priorityField').style.display = showPriority ? 'block' : 'none';
 
   // Priority 2 button visible for: microsoft, fs (NOT checkpoint — Checkpoint has no Priority 2)
@@ -1049,7 +1053,8 @@ function onVendorChange() {
   // Priority 4 button visible for: checkpoint, fs
   document.getElementById('p4btn').style.display = ['checkpoint', 'fs'].includes(v) ? '' : 'none';
 
-  // Reset to Priority 1 whenever vendor changes (except OS which forces P2)
+  // Reset priority whenever vendor changes — OS is always forced to Priority 2,
+  // everything else defaults back to Priority 1.
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   if (v === 'os') {
     document.querySelector('[data-p="2"]').classList.add('active');
