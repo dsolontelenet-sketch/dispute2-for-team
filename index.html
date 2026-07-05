@@ -565,6 +565,8 @@
         <option value="tw">TW</option>
         <option value="so">SO</option>
         <option value="fs">FS</option>
+        <option value="jn">JN</option>
+        <option value="hn">HN</option>
         <option value="partnerportal">Partner Portal</option>
       </select>
     </div>
@@ -1063,6 +1065,8 @@ const VENDOR_CONFIG = {
   tw:            { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
   so:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
   fs:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  jn:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  hn:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
   partnerportal: { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
 };
 
@@ -1294,9 +1298,9 @@ function dateOnly(acc) {
 }
 
 // ── FILENAME ──
-// Vendors with priority: ZO, AZ, OS, IS, SO all follow the pattern:
+// Vendors with priority: ZO, AZ, OS, IS, SO, FS, JN, HN all follow the pattern:
 //   "Disputes Priority {N} {VENDOR_LABEL} accepted at {ACC}"
-// Special cases remain unchanged (Checkpoint, Microsoft, Barracuda, TW, FS, Partner Portal).
+// Special cases remain unchanged (Checkpoint, Microsoft, Barracuda, TW, Partner Portal).
 function getFilename() {
   const v   = document.getElementById('vendor').value;
   const acc = document.getElementById('accepted').value.trim();
@@ -1338,6 +1342,12 @@ function getFilename() {
 
     case 'fs':
       return `Disputes Priority ${p} FS accepted at ${acc}`;
+
+    case 'jn':
+      return `Disputes Priority ${p} JN accepted at ${acc}`;
+
+    case 'hn':
+      return `Disputes Priority ${p} HN accepted at ${acc}`;
 
     case 'partnerportal':
       return `P1 dispute Partner Portal ${acc}`;
