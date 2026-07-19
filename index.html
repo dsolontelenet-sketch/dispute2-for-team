@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1541,13 +1542,13 @@ function generate() {
   const wsData = rows.map(({ url, cat, sec, secCat }) => {
     const hasSecurityCat = secCat !== null && secCat !== undefined && secCat !== '';
     const colD = hasSecurityCat ? secCat : 99999;
-    const colE = hasSecurityCat ? '' : 'Immutable';
+    // Column E (Immutable) is intentionally left blank for all vendors on export.
     return [
       url,
       cat !== null && cat !== undefined ? cat : null,
       sec !== null && sec !== undefined ? sec : null,
       colD,
-      colE,
+      '',
       'UCReviewed,CLReviewed,CLRetain,HTTPError,IWCC,InTheClear,Uncategorized,UnknownHost,Undeliverable,Deleted,StDnsError,NRD,DLCSkip'
     ];
   });
