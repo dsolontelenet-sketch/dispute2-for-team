@@ -1,14 +1,13 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Disputes File Generator</title>
+<title>Disputes File Generator — Team</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%237c3aed'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-weight='700' font-size='40' fill='white'>D</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- Firebase (compat SDK so we can use plain <script> tags, no bundler needed) -->
+<!-- Firebase (compat SDK) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
@@ -30,6 +29,18 @@
     --wiki-tw-bg: #0e150e;
     --wiki-tw-border: #1a2a1a;
     --wiki-tw-accent: #4dff88;
+    --wiki-gen-border: #2a2a1a;
+    --wiki-gen-accent: #ffd166;
+    --wiki-gen-bg: #15130e;
+    --wiki-zo-border: #1a2a2a;
+    --wiki-zo-accent: #4dd0e1;
+    --wiki-zo-bg: #0e1517;
+    --wiki-az-border: #2a1a2a;
+    --wiki-az-accent: #e14dd0;
+    --wiki-az-bg: #150e17;
+    --ns-bg: #140e1a;
+    --ns-border: #2a1a3a;
+    --ns-accent: #c084fc;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -99,7 +110,7 @@
   .priority-btn:hover { border-color: var(--accent); color: var(--accent); }
   .priority-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
 
-  /* ── CHECKPOINT NAME (now a searchable dropdown / combobox) ── */
+  /* ── NAME FIELD (shown for all vendors) ── */
   .cp-name-field { display: none; margin-bottom: 1.5rem; }
   .cp-name-field.visible { display: block; }
 
@@ -166,7 +177,6 @@
   .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
   .mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
 
-  /* ── URL ROW ── */
   .url-col-headers {
     display: flex; align-items: center; gap: 0.5rem;
     margin-bottom: 0.35rem; padding-left: 26px;
@@ -294,7 +304,7 @@
   .hint { font-size: 0.74rem; color: var(--muted); margin-top: 0.3rem; }
   .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
 
-  /* ── WIKI MESSAGE SECTION (shared structure) ── */
+  /* ── WIKI MESSAGE SECTION (shared) ── */
   .wiki-section {
     margin-top: 1.5rem;
     border-radius: 10px;
@@ -303,10 +313,7 @@
   }
   .wiki-section.visible { display: block; }
 
-  /* Checkpoint variant — blue */
-  .wiki-section.variant-cp {
-    border: 1px solid var(--wiki-border);
-  }
+  .wiki-section.variant-cp { border: 1px solid var(--wiki-border); }
   .wiki-section.variant-cp .wiki-header {
     background: rgba(77,184,255,0.06);
     border-bottom: 1px solid var(--wiki-border);
@@ -322,10 +329,7 @@
   .wiki-section.variant-cp .copy-btn:hover  { border-color: var(--wiki-accent); color: var(--wiki-accent); }
   .wiki-section.variant-cp .copy-btn.copied { border-color: var(--success); color: var(--success); }
 
-  /* TW variant — green */
-  .wiki-section.variant-tw {
-    border: 1px solid var(--wiki-tw-border);
-  }
+  .wiki-section.variant-tw { border: 1px solid var(--wiki-tw-border); }
   .wiki-section.variant-tw .wiki-header {
     background: rgba(77,255,136,0.05);
     border-bottom: 1px solid var(--wiki-tw-border);
@@ -340,6 +344,54 @@
   .wiki-section.variant-tw .copy-btn    { border-color: var(--wiki-tw-border); }
   .wiki-section.variant-tw .copy-btn:hover  { border-color: var(--wiki-tw-accent); color: var(--wiki-tw-accent); }
   .wiki-section.variant-tw .copy-btn.copied { border-color: var(--success); color: var(--success); }
+
+  .wiki-section.variant-gen { border: 1px solid var(--wiki-gen-border); }
+  .wiki-section.variant-gen .wiki-header {
+    background: rgba(255,209,102,0.06);
+    border-bottom: 1px solid var(--wiki-gen-border);
+  }
+  .wiki-section.variant-gen .wiki-title  { color: var(--wiki-gen-accent); }
+  .wiki-section.variant-gen .wiki-badge  {
+    background: rgba(255,209,102,0.15);
+    border: 1px solid rgba(255,209,102,0.3);
+    color: var(--wiki-gen-accent);
+  }
+  .wiki-section.variant-gen .wiki-body   { background: var(--wiki-gen-bg); }
+  .wiki-section.variant-gen .copy-btn    { border-color: var(--wiki-gen-border); }
+  .wiki-section.variant-gen .copy-btn:hover  { border-color: var(--wiki-gen-accent); color: var(--wiki-gen-accent); }
+  .wiki-section.variant-gen .copy-btn.copied { border-color: var(--success); color: var(--success); }
+
+  .wiki-section.variant-zo { border: 1px solid var(--wiki-zo-border); }
+  .wiki-section.variant-zo .wiki-header {
+    background: rgba(77,208,225,0.06);
+    border-bottom: 1px solid var(--wiki-zo-border);
+  }
+  .wiki-section.variant-zo .wiki-title  { color: var(--wiki-zo-accent); }
+  .wiki-section.variant-zo .wiki-badge  {
+    background: rgba(77,208,225,0.15);
+    border: 1px solid rgba(77,208,225,0.3);
+    color: var(--wiki-zo-accent);
+  }
+  .wiki-section.variant-zo .wiki-body   { background: var(--wiki-zo-bg); }
+  .wiki-section.variant-zo .copy-btn    { border-color: var(--wiki-zo-border); }
+  .wiki-section.variant-zo .copy-btn:hover  { border-color: var(--wiki-zo-accent); color: var(--wiki-zo-accent); }
+  .wiki-section.variant-zo .copy-btn.copied { border-color: var(--success); color: var(--success); }
+
+  .wiki-section.variant-az { border: 1px solid var(--wiki-az-border); }
+  .wiki-section.variant-az .wiki-header {
+    background: rgba(225,77,208,0.06);
+    border-bottom: 1px solid var(--wiki-az-border);
+  }
+  .wiki-section.variant-az .wiki-title  { color: var(--wiki-az-accent); }
+  .wiki-section.variant-az .wiki-badge  {
+    background: rgba(225,77,208,0.15);
+    border: 1px solid rgba(225,77,208,0.3);
+    color: var(--wiki-az-accent);
+  }
+  .wiki-section.variant-az .wiki-body   { background: var(--wiki-az-bg); }
+  .wiki-section.variant-az .copy-btn    { border-color: var(--wiki-az-border); }
+  .wiki-section.variant-az .copy-btn:hover  { border-color: var(--wiki-az-accent); color: var(--wiki-az-accent); }
+  .wiki-section.variant-az .copy-btn.copied { border-color: var(--success); color: var(--success); }
 
   .wiki-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -372,17 +424,18 @@
     white-space: pre-wrap; word-break: break-word;
   }
 
-  /* shared highlight classes */
   .wiki-message .hl-ts   { color: #ffd166; }
   .wiki-message .hl-num  { color: var(--success); }
   .wiki-message .hl-jp   { color: #c084fc; }
   .wiki-message .hl-none { color: var(--muted); }
   .wiki-message .hl-name { color: #fb923c; }
-  /* TW-specific highlights */
+  .wiki-message .hl-key  { color: var(--wiki-accent); }
   .wiki-message .hl-tw-num { color: var(--wiki-tw-accent); }
   .wiki-message .hl-tw-ts  { color: #a8e6a3; }
+  .wiki-message .hl-zo-num { color: var(--wiki-zo-accent); }
+  .wiki-message .hl-az-num { color: var(--wiki-az-accent); }
 
-  /* ── Name pill (used inside the Your Name dropdown) ── */
+  /* ── Name pill ── */
   .name-pill {
     display: flex; align-items: center; gap: 0.7rem;
     background: var(--bg); border: 1px solid var(--border);
@@ -420,7 +473,7 @@
   .name-pill .pill-icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,77,0.08); }
   .name-pill .pill-icon-btn.confirm { border-color: var(--success); color: var(--success); }
 
-  /* ── CONFIRM DIALOG (delete / rename) ── */
+  /* ── Confirm dialog ── */
   .confirm-overlay {
     position: fixed; inset: 0; background: rgba(5,6,10,0.88);
     display: flex; align-items: center; justify-content: center;
@@ -455,7 +508,7 @@
   .confirm-btn.primary:hover { background: #33dcff; }
   .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* ── CP P2: FILE STATISTICS + MANUAL FIELDS ── */
+  /* ── CP P2 stats ── */
   .cp2-section { display: none; margin-bottom: 1.5rem; }
   .cp2-section.visible { display: block; }
 
@@ -508,7 +561,7 @@
     font-family: 'IBM Plex Sans', sans-serif; margin-top: 0.15rem;
   }
 
-  /* ── WIKI CONTROLS (editable Immutable / Security Category, per wiki box) ── */
+  /* ── WIKI CONTROLS ── */
   .wiki-controls {
     display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
     padding: 0 1.25rem 1rem;
@@ -521,17 +574,146 @@
   }
   .wiki-section.variant-cp .wiki-control-field input:focus { border-color: var(--wiki-accent); }
   .wiki-section.variant-tw .wiki-control-field input:focus { border-color: var(--wiki-tw-accent); }
+  .wiki-section.variant-gen .wiki-control-field input:focus { border-color: var(--wiki-gen-accent); }
+  .wiki-section.variant-zo .wiki-control-field input:focus { border-color: var(--wiki-zo-accent); }
+  .wiki-section.variant-az .wiki-control-field input:focus { border-color: var(--wiki-az-accent); }
+
+  /* ── NS MANAGER REPORT ── */
+  .ns-section {
+    margin-top: 1.5rem;
+    border-radius: 10px;
+    overflow: hidden;
+    display: none;
+    border: 1px solid var(--ns-border);
+  }
+  .ns-section.visible { display: block; }
+
+  .ns-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: rgba(192,132,252,0.06);
+    border-bottom: 1px solid var(--ns-border);
+  }
+  .ns-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em; display: flex; align-items: center; gap: 0.5rem;
+    color: var(--ns-accent);
+  }
+  .ns-badge {
+    font-size: 0.65rem;
+    border-radius: 20px; padding: 0.1rem 0.5rem;
+    background: rgba(192,132,252,0.15);
+    border: 1px solid rgba(192,132,252,0.3);
+    color: var(--ns-accent);
+  }
+
+  .ns-body { background: var(--ns-bg); padding: 1.25rem; }
+
+  .ns-field { margin-bottom: 1.25rem; }
+
+  .ns-field label {
+    display: block; font-size: 0.65rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 0.4rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .ns-field input[type="text"] {
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--ns-border); border-radius: 6px;
+    padding: 0.6rem 0.85rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem;
+    outline: none; transition: border-color 0.2s;
+  }
+  .ns-field input[type="text"]:focus { border-color: var(--ns-accent); }
+  .ns-field input[type="text"]::placeholder { color: rgba(192,132,252,0.4); }
+
+  .ns-status-group { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+  .ns-status-btn {
+    flex: 1; min-width: 60px; padding: 0.45rem 0.5rem;
+    background: var(--bg); border: 1px solid var(--ns-border);
+    border-radius: 6px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;
+    cursor: pointer; transition: all 0.15s; text-align: center;
+  }
+  .ns-status-btn:hover { border-color: var(--ns-accent); color: var(--ns-accent); }
+  .ns-status-btn.active { border-color: var(--ns-accent); color: var(--ns-accent); background: rgba(192,132,252,0.1); }
+
+  .ns-change-fields {
+    display: none;
+    margin-top: 0.6rem;
+    padding: 0.75rem;
+    background: rgba(192,132,252,0.04);
+    border: 1px dashed rgba(192,132,252,0.25);
+    border-radius: 6px;
+  }
+  .ns-change-fields.visible { display: block; }
+
+  .ns-change-fields .ns-field { margin-bottom: 0.75rem; }
+  .ns-change-fields .ns-field:last-child { margin-bottom: 0; }
+
+  .ns-report-box {
+    background: var(--bg);
+    border: 1px solid var(--ns-border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+  .ns-report-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+  .ns-report-box .lbl {
+    font-size: 0.65rem; font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 0;
+  }
+  .ns-report-message {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .ns-report-message .hl-ns-url  { color: #c084fc; }
+  .ns-report-message .hl-ns-ts   { color: #ffd166; }
+  .ns-report-message .hl-ns-key  { color: var(--ns-accent); }
+  .ns-report-message .hl-ns-arrow { color: #fb923c; }
+  .ns-report-message .hl-ns-val  { color: var(--success); }
+
+  .ns-copy-btn {
+    background: transparent;
+    border: 1px solid var(--ns-border);
+    border-radius: 6px;
+    padding: 0.3rem 0.75rem;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 0.35rem;
+  }
+  .ns-copy-btn:hover { border-color: var(--ns-accent); color: var(--ns-accent); }
+  .ns-copy-btn.copied { border-color: var(--success); color: var(--success); }
+
+  .ns-divider { border: none; border-top: 1px solid var(--ns-border); margin: 1rem 0; }
 
   @media (max-width: 640px) {
     .stat-grid { grid-template-columns: repeat(2, 1fr); }
     .manual-grid { grid-template-columns: 1fr; }
     .wiki-controls { grid-template-columns: 1fr; }
+    .ns-status-group { flex-direction: column; }
   }
 </style>
 </head>
 <body>
 
-<!-- ══════════ CONFIRM DIALOG (delete / rename) ══════════ -->
+<!-- Confirm dialog -->
 <div class="confirm-overlay hidden" id="confirmOverlay">
   <div class="confirm-card">
     <h3 id="confirmTitle">Are you sure?</h3>
@@ -545,7 +727,7 @@
 
 <div class="container">
   <div class="header">
-    <h1>Disputes File Generator</h1>
+    <h1>Disputes File Generator — Team</h1>
     <p>Generate formatted Excel dispute files with correct filenames</p>
   </div>
 
@@ -583,7 +765,7 @@
       </div>
     </div>
 
-    <!-- Checkpoint Name (searchable dropdown / combobox) — only shown for Checkpoint + Priority 1 -->
+    <!-- Your Name — shown for ALL vendors -->
     <div class="cp-name-field" id="cpNameField">
       <label>Your Name <span style="color:var(--accent);font-size:0.65rem;letter-spacing:0.05em;text-transform:none;font-family:'IBM Plex Sans',sans-serif;">(used in filename)</span></label>
 
@@ -595,7 +777,7 @@
         <span class="name-combo-caret">▾</span>
 
         <div class="name-combo-dropdown" id="nameComboDropdown">
-          <div class="name-combo-list" id="nameComboList"><!-- populated from Firestore --></div>
+          <div class="name-combo-list" id="nameComboList"></div>
           <div class="name-combo-empty" id="nameComboEmpty">No saved names yet — type one above, then add it.</div>
           <button type="button" class="name-combo-add" id="nameComboAddBtn" onclick="addNameFromInput()">＋ Add "<span id="nameComboAddText"></span>" as new name</button>
         </div>
@@ -604,9 +786,8 @@
       <p class="hint" id="cpNameHint">Type a name or pick one from the dropdown. Leave blank to use <strong style="color:var(--text);">Diovic</strong> as default.</p>
     </div>
 
-    <!-- ── CP PRIORITY 2: FILE STATISTICS + MANUAL FIELDS ── -->
+    <!-- CP P2 stats -->
     <div class="cp2-section" id="cp2Section">
-
       <div class="cp2-block">
         <div class="cp2-block-title"><span class="rule"></span>File Statistics</div>
         <div class="stat-grid">
@@ -650,7 +831,6 @@
           </div>
         </div>
       </div>
-
     </div>
 
     <hr class="divider">
@@ -674,7 +854,6 @@
         <button class="mode-btn" id="btn-bulk" onclick="setMode('bulk')">📋 Paste Bulk</button>
       </div>
 
-      <!-- Single mode -->
       <div id="single-mode">
         <div class="url-col-headers">
           <span class="url-col-label url-lbl">URL</span>
@@ -687,7 +866,6 @@
         <button class="url-add" onclick="addRow()">＋ Add another URL</button>
       </div>
 
-      <!-- Bulk mode -->
       <div id="bulk-mode" style="display:none;">
         <textarea id="bulk-ta"
           placeholder="Paste URLs here — one per line:&#10;&#10;google.com&#10;facebook.com&#10;example.org&#10;malicious-site.net&#10;..."
@@ -696,10 +874,8 @@
       </div>
     </div>
 
-    <!-- Validation banner -->
     <div class="validation-banner" id="validation-banner"></div>
 
-    <!-- Preview -->
     <div class="preview-box">
       <div class="lbl">Filename Preview</div>
       <div class="preview-fn" id="preview-fn">—</div>
@@ -708,7 +884,7 @@
 
     <button class="btn-generate" id="genBtn" onclick="generate()" disabled>Generate &amp; Download</button>
 
-    <!-- ── WIKI MESSAGE: Checkpoint P1 ── -->
+    <!-- Wiki: Checkpoint P1 -->
     <div class="wiki-section variant-cp" id="wiki-section-cp">
       <div class="wiki-header">
         <div class="wiki-title">
@@ -735,7 +911,7 @@
       </div>
     </div>
 
-    <!-- ── WIKI MESSAGE: TW ── -->
+    <!-- Wiki: TW -->
     <div class="wiki-section variant-tw" id="wiki-section-tw">
       <div class="wiki-header">
         <div class="wiki-title">
@@ -762,6 +938,205 @@
       </div>
     </div>
 
+    <!-- Wiki: Generic (Barracuda / Microsoft / OS / IS / SO / FS / JN / HN) -->
+    <div class="wiki-section variant-gen" id="wiki-section-gen">
+      <div class="wiki-header">
+        <div class="wiki-title">
+          📋 Wiki Message
+          <span class="wiki-badge" id="wiki-gen-badge">—</span>
+        </div>
+        <button class="copy-btn" id="copy-btn-gen" onclick="copyWiki('gen')">
+          <span id="copy-icon-gen">⎘</span>
+          <span id="copy-label-gen">Copy</span>
+        </button>
+      </div>
+      <div class="wiki-controls">
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Tagged as Immutable</label>
+          <input type="number" id="genImmutable" min="0" placeholder="0" oninput="updatePreview()" />
+        </div>
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Security Category</label>
+          <input type="text" id="genSecurityCat" placeholder="None" oninput="updatePreview()" />
+        </div>
+      </div>
+      <div class="wiki-body">
+        <div class="wiki-message" id="wiki-message-gen">—</div>
+      </div>
+    </div>
+
+    <!-- Wiki: ZO -->
+    <div class="wiki-section variant-zo" id="wiki-section-zo">
+      <div class="wiki-header">
+        <div class="wiki-title">
+          📋 Wiki Message
+          <span class="wiki-badge" id="wiki-zo-badge">—</span>
+        </div>
+        <button class="copy-btn" id="copy-btn-zo" onclick="copyWiki('zo')">
+          <span id="copy-icon-zo">⎘</span>
+          <span id="copy-label-zo">Copy</span>
+        </button>
+      </div>
+      <div class="wiki-controls">
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Tagged as Immutable</label>
+          <input type="number" id="zoImmutable" min="0" placeholder="0" oninput="updatePreview()" />
+        </div>
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Security Category</label>
+          <input type="text" id="zoSecurityCat" placeholder="None" oninput="updatePreview()" />
+        </div>
+      </div>
+      <div class="wiki-body">
+        <div class="wiki-message" id="wiki-message-zo">—</div>
+      </div>
+    </div>
+
+    <!-- Wiki: AZ -->
+    <div class="wiki-section variant-az" id="wiki-section-az">
+      <div class="wiki-header">
+        <div class="wiki-title">
+          📋 Wiki Message
+          <span class="wiki-badge" id="wiki-az-badge">—</span>
+        </div>
+        <button class="copy-btn" id="copy-btn-az" onclick="copyWiki('az')">
+          <span id="copy-icon-az">⎘</span>
+          <span id="copy-label-az">Copy</span>
+        </button>
+      </div>
+      <div class="wiki-controls">
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Tagged as Immutable</label>
+          <input type="number" id="azImmutable" min="0" placeholder="0" oninput="updatePreview()" />
+        </div>
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Security Category</label>
+          <input type="text" id="azSecurityCat" placeholder="None" oninput="updatePreview()" />
+        </div>
+      </div>
+      <div class="wiki-body">
+        <div class="wiki-message" id="wiki-message-az">—</div>
+      </div>
+    </div>
+
+    <!-- NS Manager Report -->
+    <div class="ns-section" id="ns-section">
+      <div class="ns-header">
+        <div class="ns-title">
+          📋 NS Manager Report
+          <span class="ns-badge" id="ns-badge-text">—</span>
+        </div>
+      </div>
+      <div class="ns-body">
+
+        <div class="ns-field">
+          <label>Security URL</label>
+          <input type="text" id="nsSecurityUrl" placeholder="e.g. technologi.site" oninput="updatePreview()" />
+        </div>
+
+        <hr class="ns-divider">
+
+        <div class="ns-field">
+          <label>Primary Status</label>
+          <div class="ns-status-group" id="nsPrimaryStatusGroup">
+            <button class="ns-status-btn active" data-status="add" onclick="selectNSStatus('primary','add',this)">Add</button>
+            <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('primary','retained',this)">Retained</button>
+            <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('primary','changed',this)">Changed</button>
+            <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('primary','removed',this)">Removed</button>
+          </div>
+          <div class="ns-change-fields" id="nsPrimaryFields">
+            <div class="ns-field" id="nsPrimaryCatField">
+              <label id="nsPrimaryCatLabel">Category name</label>
+              <input type="text" id="nsPrimaryCat" placeholder="e.g. Computing & Internet" oninput="updatePreview()" />
+            </div>
+            <div class="ns-field" id="nsPrimaryNewField" style="display:none;">
+              <label>New category name</label>
+              <input type="text" id="nsPrimaryNewCat" placeholder="e.g. Miscellaneous" oninput="updatePreview()" />
+            </div>
+          </div>
+        </div>
+
+        <hr class="ns-divider">
+
+        <div class="ns-field">
+          <label>Secondary Status</label>
+          <div class="ns-status-group" id="nsSecondaryStatusGroup">
+            <button class="ns-status-btn active" data-status="none" onclick="selectNSStatus('secondary','none',this)">No Secondary</button>
+            <button class="ns-status-btn" data-status="add" onclick="selectNSStatus('secondary','add',this)">Add</button>
+            <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('secondary','retained',this)">Retained</button>
+            <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('secondary','changed',this)">Changed</button>
+            <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('secondary','removed',this)">Removed</button>
+          </div>
+          <div class="ns-change-fields" id="nsSecondaryFields">
+            <div class="ns-field" id="nsSecondaryCatField">
+              <label id="nsSecondaryCatLabel">Category name</label>
+              <input type="text" id="nsSecondaryCat" placeholder="e.g. Phishing Sites" oninput="updatePreview()" />
+            </div>
+            <div class="ns-field" id="nsSecondaryNewField" style="display:none;">
+              <label>New category name</label>
+              <input type="text" id="nsSecondaryNewCat" placeholder="e.g. Malware Sites" oninput="updatePreview()" />
+            </div>
+          </div>
+        </div>
+
+        <hr class="ns-divider">
+
+        <div class="ns-field">
+          <label>Security Status</label>
+          <div class="ns-status-group" id="nsSecurityStatusGroup">
+            <button class="ns-status-btn active" data-status="add" onclick="selectNSStatus('security','add',this)">Add</button>
+            <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('security','retained',this)">Retained</button>
+            <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('security','changed',this)">Changed</button>
+            <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('security','removed',this)">Removed</button>
+          </div>
+          <div class="ns-change-fields" id="nsSecurityFields">
+            <div class="ns-field" id="nsSecurityCatField">
+              <label id="nsSecurityCatLabel">Category name</label>
+              <input type="text" id="nsSecurityCat" placeholder="e.g. Phishing Sites" oninput="updatePreview()" />
+            </div>
+            <div class="ns-field" id="nsSecurityNewField" style="display:none;">
+              <label>New category name</label>
+              <input type="text" id="nsSecurityNewCat" placeholder="e.g. Malware Sites" oninput="updatePreview()" />
+            </div>
+          </div>
+        </div>
+
+        <hr class="ns-divider">
+
+        <div class="ns-field">
+          <label>Tags Status</label>
+          <div class="ns-status-group" id="nsTagsStatusGroup">
+            <button class="ns-status-btn active" data-status="add" onclick="selectNSStatus('tags','add',this)">Add</button>
+            <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('tags','retained',this)">Retained</button>
+            <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('tags','changed',this)">Changed</button>
+            <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('tags','removed',this)">Removed</button>
+          </div>
+          <div class="ns-change-fields" id="nsTagsFields">
+            <div class="ns-field" id="nsTagsCatField">
+              <label id="nsTagsCatLabel">Tag</label>
+              <input type="text" id="nsTagsCat" placeholder="e.g. Disputed" oninput="updatePreview()" />
+            </div>
+            <div class="ns-field" id="nsTagsNewField" style="display:none;">
+              <label>New tag</label>
+              <input type="text" id="nsTagsNewCat" placeholder="e.g. Resolved" oninput="updatePreview()" />
+            </div>
+          </div>
+        </div>
+
+        <div class="ns-report-box">
+          <div class="ns-report-header">
+            <div class="lbl">Report Preview</div>
+            <button class="ns-copy-btn" id="ns-copy-btn" onclick="copyNSReport()">
+              <span id="ns-copy-icon">⎘</span>
+              <span id="ns-copy-label">Copy</span>
+            </button>
+          </div>
+          <div class="ns-report-message" id="ns-report-message">—</div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -783,7 +1158,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const USERS_COLLECTION = 'disputeUsers';
 
-/* ── Generic confirm dialog (used for delete + rename) ── */
+/* ── Generic confirm dialog ── */
 let _confirmResolveAction = null;
 
 function showConfirmDialog({ title, message, okLabel, okClass, onConfirm, onCancel }) {
@@ -837,7 +1212,6 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
-/* ── Save a (new) name to Firestore, deduped by lowercase name ── */
 async function saveNameToFirestore(name) {
   const id = name.trim().toLowerCase().replace(/\s+/g, '-');
   try {
@@ -851,7 +1225,7 @@ async function saveNameToFirestore(name) {
 }
 
 /* ════════════════════════════════════════════
-   "YOUR NAME" DROPDOWN / COMBOBOX
+   NAME COMBOBOX
    ════════════════════════════════════════════ */
 let savedNames = [];
 let nameComboOpen = false;
@@ -1051,9 +1425,7 @@ function deleteComboName(btn) {
 }
 
 /* ════════════════════════════════════════════
-   VENDOR PRIORITY CONFIG
-   Defines which priority buttons are shown and
-   which priority is the default for each vendor.
+   VENDOR CONFIG
    ════════════════════════════════════════════ */
 const VENDOR_CONFIG = {
   barracuda:     { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
@@ -1061,7 +1433,7 @@ const VENDOR_CONFIG = {
   az:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
   checkpoint:    { showPriority: true,  availablePriorities: [1,3,4],     defaultPriority: 1 },
   microsoft:     { showPriority: true,  availablePriorities: [1,2,3],     defaultPriority: 1 },
-  os:            { showPriority: false,  availablePriorities: [],   defaultPriority: 2 },
+  os:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
   is:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
   tw:            { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
   so:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
@@ -1071,15 +1443,62 @@ const VENDOR_CONFIG = {
   partnerportal: { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
 };
 
+const VENDOR_LABELS = {
+  barracuda:     'Barracuda',
+  zo:            'ZO',
+  az:            'AZ',
+  checkpoint:    'Checkpoint',
+  microsoft:     'Microsoft',
+  os:            'OS',
+  is:            'IS',
+  tw:            'TW',
+  so:            'SO',
+  fs:            'FS',
+  jn:            'JN',
+  hn:            'HN',
+  partnerportal: 'Partner Portal',
+};
+
+const VENDOR_WIKI_ABBR = {
+  barracuda:     'Barracuda',
+  zo:            'ZO',
+  az:            'AZ',
+  checkpoint:    'CP',
+  microsoft:     'MD',
+  os:            'OS',
+  is:            'IS',
+  tw:            'TW',
+  so:            'SO',
+  fs:            'FS',
+  jn:            'JN',
+  hn:            'HN',
+  partnerportal: 'Partner Portal',
+};
+
+// Vendors that use the generic wiki section
+const GENERIC_WIKI_VENDORS = ['barracuda', 'microsoft', 'os', 'is', 'so', 'fs', 'jn', 'hn'];
+
+// Generic-wiki vendors whose File: line should say "accepted at"
+const GENERIC_WIKI_ACCEPTED_AT = ['os', 'is', 'so', 'fs', 'jn', 'hn'];
+
 /* ════════════════════════════════════════════
    APP LOGIC
    ════════════════════════════════════════════ */
 let selectedPriority = 1;
 let mode = 'single';
 
+/* NS Manager state */
+const nsStatus = {
+  primary: 'add',
+  secondary: 'none',
+  security: 'add',
+  tags: 'add'
+};
+
 window.addEventListener('DOMContentLoaded', () => {
   addRow();
   loadNamesCache();
+  updateNSFieldsVisibility();
 });
 
 // ── VENDOR ──
@@ -1087,10 +1506,8 @@ function onVendorChange() {
   const v = document.getElementById('vendor').value;
   const cfg = VENDOR_CONFIG[v] || { showPriority: false, availablePriorities: [], defaultPriority: 1 };
 
-  // Show/hide priority field
   document.getElementById('priorityField').style.display = cfg.showPriority ? 'block' : 'none';
 
-  // Show/hide individual priority buttons based on vendor config
   [1, 2, 3, 4].forEach(p => {
     const btn = document.querySelector(`.priority-btn[data-p="${p}"]`);
     if (btn) {
@@ -1098,7 +1515,6 @@ function onVendorChange() {
     }
   });
 
-  // Reset all buttons, then activate the default priority
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   selectedPriority = cfg.defaultPriority;
   const defaultBtn = document.querySelector(`.priority-btn[data-p="${selectedPriority}"]`);
@@ -1113,7 +1529,6 @@ function selectPriority(btn) {
   const cfg = VENDOR_CONFIG[v] || { availablePriorities: [] };
   const p = parseInt(btn.dataset.p);
 
-  // Only allow selecting priorities that are available for this vendor
   if (!cfg.availablePriorities.includes(p)) return;
 
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
@@ -1123,14 +1538,12 @@ function selectPriority(btn) {
   updatePreview();
 }
 
-// Checkpoint name field only shows for Checkpoint vendor AND Priority 1
+// Name field is now shown whenever a vendor is selected (for all vendors)
 function updateCpNameVisibility() {
   const v = document.getElementById('vendor').value;
   const cpNameField = document.getElementById('cpNameField');
-  cpNameField.classList.toggle('visible', v === 'checkpoint' && selectedPriority === 1);
-  if (!(v === 'checkpoint' && selectedPriority === 1)) {
-    closeNameDropdown();
-  }
+  cpNameField.classList.toggle('visible', v !== '');
+  if (!v) closeNameDropdown();
 }
 
 // ── MODE ──
@@ -1152,9 +1565,9 @@ function addRow() {
   row.innerHTML = `
     <span class="url-num">${idx}</span>
     <input type="text" class="inp-url" placeholder="e.g. google.com" oninput="updatePreview()" />
-    <input type="number" class="inp-cat" placeholder="Primary" oninput="onCatInput(this)" min="0" />
+    <input type="number" class="inp-cat" placeholder="Primary" oninput="updatePreview()" min="0" />
     <input type="number" class="inp-sec" placeholder="Secondary" oninput="updatePreview()" min="0" />
-    <input type="text" class="inp-seccat" placeholder="Security" oninput="onSecurityInput(this)" />
+    <input type="text" class="inp-seccat" placeholder="Security" oninput="updatePreview()" />
     <button class="url-del" onclick="delRow(this)" title="Remove">✕</button>
   `;
   wrap.appendChild(row);
@@ -1185,21 +1598,7 @@ function reindex() {
   });
 }
 
-function onCatInput(input) {
-  updatePreview();
-}
-
-function onSecurityInput(input) {
-  updatePreview();
-}
-
 // ── HELPERS ──
-// Cleans a pasted URL down to a bare host(+path):
-//  1. Trim whitespace
-//  2. Strip a leading http:// or https:// scheme
-//  3. Strip a trailing :port (and anything after, preserving any path)
-//  4. Strip a literal leading "www." (but NOT "www2.", "www3.", etc — only
-//     the exact "www." prefix is removed)
 function cleanUrl(url) {
   return url
     .trim()
@@ -1269,16 +1668,12 @@ function getInvalidRows() {
 
 function pad(n) { return String(n).padStart(2, '0'); }
 
-// Formats the "Tagged as Immutable" field: blank/0 => "None", otherwise "01 URL" / "02 URLs"
 function formatImmutable(raw) {
   const n = parseInt(raw, 10);
   if (!n || n <= 0) return 'None';
   return `${pad(n)} URL${n >= 2 ? 's' : ''}`;
 }
 
-// Formats the "Security category" field: blank => "None".
-// If a plain number is typed (e.g. "45"), it's shown as "45 URLs" (or "1 URL" for singular).
-// Any non-numeric text is shown as-is.
 function formatSecurityCat(raw) {
   const v = (raw || '').trim();
   if (!v) return 'None';
@@ -1298,77 +1693,348 @@ function dateOnly(acc) {
   return acc.replace('T', '').substring(0, 8);
 }
 
+// Wiki Comment: line — does it use "accepted at"?
+function wikiCommentUsesAcceptedAt(vendor, priority) {
+  if (vendor === 'barracuda') return false;
+  if (vendor === 'microsoft' && priority === 1) return false;
+  return true;
+}
+
+// Wiki File: line — does it include "accepted" at all?
+function wikiFileLineUsesAccepted(vendor, priority) {
+  if (vendor === 'microsoft' && priority === 1) return false;
+  if (vendor === 'barracuda') return false;
+  return true;
+}
+
+// Wiki File: line — does it use "accepted at" (with "at")?
+function wikiFileLineUsesAcceptedAt(vendor, priority) {
+  if (GENERIC_WIKI_ACCEPTED_AT.includes(vendor)) return true;
+  if (vendor === 'microsoft' && priority === 3) return true;
+  return false;
+}
+
 // ── FILENAME ──
-// Vendors with priority: ZO, AZ, OS, IS, SO, FS, JN, HN all follow the pattern:
-//   "Disputes Priority {N} {VENDOR_LABEL} accepted at {ACC}"
-// Special cases remain unchanged (Checkpoint, Microsoft, Barracuda, TW, Partner Portal).
 function getFilename() {
   const v   = document.getElementById('vendor').value;
   const acc = document.getElementById('accepted').value.trim();
   if (!v || !acc) return null;
 
   const p = selectedPriority;
+  const name = getCpName();
 
   switch (v) {
     case 'barracuda':
-      return `Disputes Priority 1 Barracuda accepted at ${acc}`;
-
+      return `Disputes Priority 1 Barracuda accepted at ${acc} ${name}`;
     case 'zo':
-      return `Disputes Priority ${p} ZO accepted at ${acc}`;
-
+      return `Disputes Priority ${p} ZO accepted at ${acc} ${name}`;
     case 'az':
-      return `Disputes Priority ${p} AZ accepted at ${acc}`;
-
+      return `Disputes Priority ${p} AZ accepted at ${acc} ${name}`;
     case 'checkpoint':
       return p === 1
-        ? `Disputes Priority 1 Checkpoint ${acc} ${getCpName()}`
-        : `Disputes Priority ${p} Checkpoint ${acc}`;
-
+        ? `Disputes Priority 1 Checkpoint ${acc} ${name}`
+        : `Disputes Priority ${p} Checkpoint ${acc} ${name}`;
     case 'microsoft':
       return p === 1
-        ? `Disputes Priority 1 Microsoft ${acc}`
-        : `Disputes Priority ${p} Microsoft accepted at ${acc}`;
-
+        ? `Disputes Priority 1 Microsoft ${acc} ${name}`
+        : `Disputes Priority ${p} Microsoft accepted at ${acc} ${name}`;
     case 'os':
-      return `Disputes Priority ${p} OS accepted at ${acc}`;
-
+      return `Disputes Priority ${p} OS accepted at ${acc} ${name}`;
     case 'is':
-      return `Disputes Priority ${p} IS accepted at ${acc}`;
-
+      return `Disputes Priority ${p} IS accepted at ${acc} ${name}`;
     case 'tw':
-      return `Disputes Priority 1 TW accepted at ${acc}`;
-
+      return `Disputes Priority 1 TW accepted at ${acc} ${name}`;
     case 'so':
-      return `Disputes Priority ${p} SO accepted at ${acc}`;
-
+      return `Disputes Priority ${p} SO accepted at ${acc} ${name}`;
     case 'fs':
-      return `Disputes Priority ${p} FS accepted at ${acc}`;
-
+      return `Disputes Priority ${p} FS accepted at ${acc} ${name}`;
     case 'jn':
-      return `Disputes Priority ${p} JN accepted at ${acc}`;
-
+      return `Disputes Priority ${p} JN accepted at ${acc} ${name}`;
     case 'hn':
-      return `Disputes Priority ${p} HN accepted at ${acc}`;
-
+      return `Disputes Priority ${p} HN accepted at ${acc} ${name}`;
     case 'partnerportal':
-      return `P1 dispute Partner Portal ${acc}`;
-
+      return `P1 dispute Partner Portal ${acc} ${name}`;
     default:
       return null;
   }
 }
 
-// ── WIKI: CHECKPOINT (plain text for clipboard) ──
+// ── NS MANAGER STATUS ──
+function selectNSStatus(section, status, btn) {
+  nsStatus[section] = status;
+  const group = btn.closest('.ns-status-group');
+  group.querySelectorAll('.ns-status-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateNSFieldsVisibility();
+  updatePreview();
+}
+
+function updateNSFieldsVisibility() {
+  // Primary
+  const primaryFields = document.getElementById('nsPrimaryFields');
+  const primaryCatField = document.getElementById('nsPrimaryCatField');
+  const primaryNewField = document.getElementById('nsPrimaryNewField');
+  const primaryCatLabel = document.getElementById('nsPrimaryCatLabel');
+
+  if (nsStatus.primary === 'add' || nsStatus.primary === 'retained' || nsStatus.primary === 'changed' || nsStatus.primary === 'removed') {
+    primaryFields.classList.add('visible');
+    if (nsStatus.primary === 'changed') {
+      primaryCatLabel.textContent = 'Original category name';
+      primaryCatField.style.display = 'block';
+      primaryNewField.style.display = 'block';
+    } else {
+      primaryCatLabel.textContent = 'Category name';
+      primaryCatField.style.display = 'block';
+      primaryNewField.style.display = 'none';
+    }
+  } else {
+    primaryFields.classList.remove('visible');
+  }
+
+  // Secondary
+  const secondaryFields = document.getElementById('nsSecondaryFields');
+  const secondaryCatField = document.getElementById('nsSecondaryCatField');
+  const secondaryNewField = document.getElementById('nsSecondaryNewField');
+  const secondaryCatLabel = document.getElementById('nsSecondaryCatLabel');
+
+  if (nsStatus.secondary !== 'none') {
+    secondaryFields.classList.add('visible');
+    if (nsStatus.secondary === 'changed') {
+      secondaryCatLabel.textContent = 'Original category name';
+      secondaryCatField.style.display = 'block';
+      secondaryNewField.style.display = 'block';
+    } else {
+      secondaryCatLabel.textContent = 'Category name';
+      secondaryCatField.style.display = 'block';
+      secondaryNewField.style.display = 'none';
+    }
+  } else {
+    secondaryFields.classList.remove('visible');
+  }
+
+  // Security
+  const securityFields = document.getElementById('nsSecurityFields');
+  const securityCatField = document.getElementById('nsSecurityCatField');
+  const securityNewField = document.getElementById('nsSecurityNewField');
+  const securityCatLabel = document.getElementById('nsSecurityCatLabel');
+
+  if (nsStatus.security === 'add' || nsStatus.security === 'retained' || nsStatus.security === 'changed' || nsStatus.security === 'removed') {
+    securityFields.classList.add('visible');
+    if (nsStatus.security === 'changed') {
+      securityCatLabel.textContent = 'Original category name';
+      securityCatField.style.display = 'block';
+      securityNewField.style.display = 'block';
+    } else {
+      securityCatLabel.textContent = 'Category name';
+      securityCatField.style.display = 'block';
+      securityNewField.style.display = 'none';
+    }
+  } else {
+    securityFields.classList.remove('visible');
+  }
+
+  // Tags
+  const tagsFields = document.getElementById('nsTagsFields');
+  const tagsCatField = document.getElementById('nsTagsCatField');
+  const tagsNewField = document.getElementById('nsTagsNewField');
+  const tagsCatLabel = document.getElementById('nsTagsCatLabel');
+
+  if (nsStatus.tags === 'add' || nsStatus.tags === 'retained' || nsStatus.tags === 'changed' || nsStatus.tags === 'removed') {
+    tagsFields.classList.add('visible');
+    if (nsStatus.tags === 'changed') {
+      tagsCatLabel.textContent = 'Original tag';
+      tagsCatField.style.display = 'block';
+      tagsNewField.style.display = 'block';
+    } else {
+      tagsCatLabel.textContent = 'Tag';
+      tagsCatField.style.display = 'block';
+      tagsNewField.style.display = 'none';
+    }
+  } else {
+    tagsFields.classList.remove('visible');
+  }
+}
+
+// Determine which wiki Security Category input has a number (drives NS Report visibility)
+function getWikiSecurityNumber() {
+  const v = document.getElementById('vendor').value;
+  let raw = '';
+  if (v === 'checkpoint') {
+    raw = document.getElementById('cpSecurityCat').value.trim();
+  } else if (v === 'tw') {
+    raw = document.getElementById('twSecurityCat').value.trim();
+  } else if (v === 'zo') {
+    raw = document.getElementById('zoSecurityCat').value.trim();
+  } else if (v === 'az') {
+    raw = document.getElementById('azSecurityCat').value.trim();
+  } else if (GENERIC_WIKI_VENDORS.includes(v)) {
+    raw = document.getElementById('genSecurityCat').value.trim();
+  }
+  if (!raw) return null;
+  if (!/^\d+$/.test(raw)) return null;
+  const n = parseInt(raw, 10);
+  return n > 0 ? n : null;
+}
+
+// ── NS REPORT (plain text for clipboard) ──
+function buildNSReport() {
+  const acc = document.getElementById('accepted').value.trim();
+  const secUrl = document.getElementById('nsSecurityUrl').value.trim();
+  if (!acc) return null;
+
+  const v = document.getElementById('vendor').value;
+  const vendorLabel = VENDOR_LABELS[v] || v;
+  const p = selectedPriority;
+
+  const lines = [];
+  lines.push('Hi All,');
+  lines.push('');
+  lines.push(`We received a ${vendorLabel} Disputes Priority ${p} accepted at ${acc} UTC`);
+  lines.push('');
+  if (secUrl) lines.push(secUrl);
+  lines.push('');
+
+  const primaryCat = document.getElementById('nsPrimaryCat').value.trim();
+  const primaryNewCat = document.getElementById('nsPrimaryNewCat').value.trim();
+  if (nsStatus.primary === 'add' && primaryCat) lines.push(`Primary: ${primaryCat}; added`);
+  else if (nsStatus.primary === 'retained' && primaryCat) lines.push(`Primary: ${primaryCat}; retained`);
+  else if (nsStatus.primary === 'changed' && primaryCat) lines.push(`Primary: ${primaryCat}; changed`);
+  else if (nsStatus.primary === 'removed' && primaryCat) lines.push(`Primary: ${primaryCat}; removed`);
+
+  const secondaryCat = document.getElementById('nsSecondaryCat').value.trim();
+  const secondaryNewCat = document.getElementById('nsSecondaryNewCat').value.trim();
+  if (nsStatus.secondary === 'add' && secondaryCat) lines.push(`Secondary: ${secondaryCat}; added`);
+  else if (nsStatus.secondary === 'retained' && secondaryCat) lines.push(`Secondary: ${secondaryCat}; retained`);
+  else if (nsStatus.secondary === 'changed' && secondaryCat) lines.push(`Secondary: ${secondaryCat}; changed`);
+  else if (nsStatus.secondary === 'removed' && secondaryCat) lines.push(`Secondary: ${secondaryCat}; removed`);
+
+  const securityCat = document.getElementById('nsSecurityCat').value.trim();
+  const securityNewCat = document.getElementById('nsSecurityNewCat').value.trim();
+  if (nsStatus.security === 'add' && securityCat) lines.push(`Security: ${securityCat}; added`);
+  else if (nsStatus.security === 'retained' && securityCat) lines.push(`Security: ${securityCat}; retained`);
+  else if (nsStatus.security === 'changed' && securityCat) lines.push(`Security: ${securityCat}; changed`);
+  else if (nsStatus.security === 'removed' && securityCat) lines.push(`Security: ${securityCat}; removed`);
+
+  const tagsCat = document.getElementById('nsTagsCat').value.trim();
+  const tagsNewCat = document.getElementById('nsTagsNewCat').value.trim();
+  if (nsStatus.tags === 'add' && tagsCat) lines.push(`Tags: ${tagsCat}; added`);
+  else if (nsStatus.tags === 'retained' && tagsCat) lines.push(`Tags: ${tagsCat}; retained`);
+  else if (nsStatus.tags === 'changed' && tagsCat) lines.push(`Tags: ${tagsCat}; changed`);
+  else if (nsStatus.tags === 'removed' && tagsCat) lines.push(`Tags: ${tagsCat}; removed`);
+
+  const changedLines = [];
+  if (nsStatus.primary === 'changed' && primaryNewCat) changedLines.push(`⇒Primary: ${primaryNewCat}`);
+  if (nsStatus.secondary === 'changed' && secondaryNewCat) changedLines.push(`⇒Secondary: ${secondaryNewCat}`);
+  if (nsStatus.security === 'changed' && securityNewCat) changedLines.push(`⇒Security: ${securityNewCat}`);
+  if (nsStatus.tags === 'changed' && tagsNewCat) changedLines.push(`⇒Tags: ${tagsNewCat}`);
+
+  if (changedLines.length > 0) {
+    lines.push('');
+    changedLines.forEach(l => lines.push(l));
+  }
+
+  lines.push('');
+  lines.push(`Comment: Disputes priority ${p} ${vendorLabel} accepted at ${acc}`);
+  lines.push('');
+  lines.push('-This site is a malware based on NetSTAR SHIELD.');
+
+  return lines.join('\n');
+}
+
+function renderNSReport() {
+  const el = document.getElementById('ns-report-message');
+  const report = buildNSReport();
+  if (!report) { el.textContent = '—'; return; }
+
+  const acc = document.getElementById('accepted').value.trim();
+  const secUrl = document.getElementById('nsSecurityUrl').value.trim();
+  const v = document.getElementById('vendor').value;
+  const vendorLabel = VENDOR_LABELS[v] || v;
+  const p = selectedPriority;
+
+  const lines = [];
+  lines.push('Hi All,');
+  lines.push('');
+  lines.push(`We received a <span class="hl-ns-key">${vendorLabel}</span> Disputes Priority ${p} accepted at <span class="hl-ns-ts">${acc}</span> UTC`);
+  lines.push('');
+  if (secUrl) lines.push(`<span class="hl-ns-url">${secUrl}</span>`);
+  lines.push('');
+
+  const primaryCat = document.getElementById('nsPrimaryCat').value.trim();
+  const primaryNewCat = document.getElementById('nsPrimaryNewCat').value.trim();
+  if (nsStatus.primary === 'add' && primaryCat) lines.push(`<span class="hl-ns-key">Primary:</span> ${primaryCat}; added`);
+  else if (nsStatus.primary === 'retained' && primaryCat) lines.push(`<span class="hl-ns-key">Primary:</span> ${primaryCat}; retained`);
+  else if (nsStatus.primary === 'changed' && primaryCat) lines.push(`<span class="hl-ns-key">Primary:</span> ${primaryCat}; changed`);
+  else if (nsStatus.primary === 'removed' && primaryCat) lines.push(`<span class="hl-ns-key">Primary:</span> ${primaryCat}; removed`);
+
+  const secondaryCat = document.getElementById('nsSecondaryCat').value.trim();
+  const secondaryNewCat = document.getElementById('nsSecondaryNewCat').value.trim();
+  if (nsStatus.secondary === 'add' && secondaryCat) lines.push(`<span class="hl-ns-key">Secondary:</span> ${secondaryCat}; added`);
+  else if (nsStatus.secondary === 'retained' && secondaryCat) lines.push(`<span class="hl-ns-key">Secondary:</span> ${secondaryCat}; retained`);
+  else if (nsStatus.secondary === 'changed' && secondaryCat) lines.push(`<span class="hl-ns-key">Secondary:</span> ${secondaryCat}; changed`);
+  else if (nsStatus.secondary === 'removed' && secondaryCat) lines.push(`<span class="hl-ns-key">Secondary:</span> ${secondaryCat}; removed`);
+
+  const securityCat = document.getElementById('nsSecurityCat').value.trim();
+  const securityNewCat = document.getElementById('nsSecurityNewCat').value.trim();
+  if (nsStatus.security === 'add' && securityCat) lines.push(`<span class="hl-ns-key">Security:</span> ${securityCat}; added`);
+  else if (nsStatus.security === 'retained' && securityCat) lines.push(`<span class="hl-ns-key">Security:</span> ${securityCat}; retained`);
+  else if (nsStatus.security === 'changed' && securityCat) lines.push(`<span class="hl-ns-key">Security:</span> ${securityCat}; changed`);
+  else if (nsStatus.security === 'removed' && securityCat) lines.push(`<span class="hl-ns-key">Security:</span> ${securityCat}; removed`);
+
+  const tagsCat = document.getElementById('nsTagsCat').value.trim();
+  const tagsNewCat = document.getElementById('nsTagsNewCat').value.trim();
+  if (nsStatus.tags === 'add' && tagsCat) lines.push(`<span class="hl-ns-key">Tags:</span> ${tagsCat}; added`);
+  else if (nsStatus.tags === 'retained' && tagsCat) lines.push(`<span class="hl-ns-key">Tags:</span> ${tagsCat}; retained`);
+  else if (nsStatus.tags === 'changed' && tagsCat) lines.push(`<span class="hl-ns-key">Tags:</span> ${tagsCat}; changed`);
+  else if (nsStatus.tags === 'removed' && tagsCat) lines.push(`<span class="hl-ns-key">Tags:</span> ${tagsCat}; removed`);
+
+  const changedLines = [];
+  if (nsStatus.primary === 'changed' && primaryNewCat) changedLines.push(`<span class="hl-ns-arrow">⇒Primary:</span> <span class="hl-ns-val">${primaryNewCat}</span>`);
+  if (nsStatus.secondary === 'changed' && secondaryNewCat) changedLines.push(`<span class="hl-ns-arrow">⇒Secondary:</span> <span class="hl-ns-val">${secondaryNewCat}</span>`);
+  if (nsStatus.security === 'changed' && securityNewCat) changedLines.push(`<span class="hl-ns-arrow">⇒Security:</span> <span class="hl-ns-val">${securityNewCat}</span>`);
+  if (nsStatus.tags === 'changed' && tagsNewCat) changedLines.push(`<span class="hl-ns-arrow">⇒Tags:</span> <span class="hl-ns-val">${tagsNewCat}</span>`);
+
+  if (changedLines.length > 0) {
+    lines.push('');
+    changedLines.forEach(l => lines.push(l));
+  }
+
+  lines.push('');
+  lines.push(`Comment: Disputes priority ${p} <span class="hl-ns-key">${vendorLabel}</span> accepted at <span class="hl-ns-ts">${acc}</span>`);
+  lines.push('');
+  lines.push('-This site is a malware based on NetSTAR SHIELD.');
+
+  el.innerHTML = lines.join('\n');
+}
+
+function copyNSReport() {
+  const report = buildNSReport();
+  if (!report) return;
+  navigator.clipboard.writeText(report).then(() => {
+    const btn = document.getElementById('ns-copy-btn');
+    const icon = document.getElementById('ns-copy-icon');
+    const label = document.getElementById('ns-copy-label');
+    btn.classList.add('copied');
+    icon.textContent = '✓';
+    label.textContent = 'Copied!';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      icon.textContent = '⎘';
+      label.textContent = 'Copy';
+    }, 2000);
+  });
+}
+
+// ── WIKI: CHECKPOINT ──
 function buildCPWikiText(acc, count, name, immutableRaw, secCatRaw) {
   const c = pad(count);
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
   const fraction = `${c}/${c}`;
   const immutable = formatImmutable(immutableRaw);
   const secCat = formatSecurityCat(secCatRaw);
-  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc} \n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
 }
 
-// ── WIKI: CHECKPOINT (rendered HTML) ──
 function renderCPWiki(acc, count, name, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -1384,14 +2050,14 @@ function renderCPWiki(acc, count, name, immutableRaw, secCatRaw) {
     `Total: <span class="hl-num">${c} ${totalLabel}</span> \n` +
     `Categorized:<span class="hl-num">${fraction}</span> \n` +
     `Uploaded on GD: <span class="hl-num">${fraction}</span>\n` +
-    `Comment: Disputes Priority 1 Checkpoint <span class="hl-ts">${acc}</span>\n` +
+    `Comment: Disputes Priority 1 Checkpoint <span class="hl-ts">${acc}</span>\n\n` +
     `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
     `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
 
-// ── WIKI: TW (plain text for clipboard) ──
+// ── WIKI: TW ──
 function buildTWWikiText(acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
@@ -1402,7 +2068,6 @@ function buildTWWikiText(acc, count, immutableRaw, secCatRaw) {
   return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes TW P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes Priority 1 TW accepted at ${d}\nTotal: ${c} ${totalLabel}\nCategorized: ${fraction}\nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 TW accepted at ${d}\n\n「The same category as the secondary」None\n「The URL already has the same categories with the same order」None\n「Tagged as Immutable」${immutable}\n「Security category」${secCat}`;
 }
 
-// ── WIKI: TW (rendered HTML) ──
 function renderTWWiki(acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -1426,6 +2091,152 @@ function renderTWWiki(acc, count, immutableRaw, secCatRaw) {
     `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
 
+// ── WIKI: GENERIC ──
+function buildGenericWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) {
+  const c = pad(count);
+  const fraction = `${c}/${c}`;
+  const totalLabel = count >= 2 ? 'URLs' : 'URL';
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  const abbr = VENDOR_WIKI_ABBR[vendor] || VENDOR_LABELS[vendor] || vendor;
+  const vendorLabel = VENDOR_LABELS[vendor] || vendor;
+  const pLabel = `P${priority}`;
+  const priorityLabel = `priority ${priority}`;
+  const commentAcceptedAt = wikiCommentUsesAcceptedAt(vendor, priority);
+  const fileUsesAccepted = wikiFileLineUsesAccepted(vendor, priority);
+  const fileUsesAcceptedAt = wikiFileLineUsesAcceptedAt(vendor, priority);
+
+  const fileLine = fileUsesAccepted
+    ? (fileUsesAcceptedAt
+        ? `File: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}`
+        : `File: Disputes ${priorityLabel} ${vendorLabel} accepted ${acc}`)
+    : `File: Disputes ${priorityLabel} ${vendorLabel} ${acc}`;
+  const commentLine = commentAcceptedAt
+    ? `Comment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}`
+    : `Comment: Disputes ${priorityLabel} ${vendorLabel} ${acc}`;
+
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes ${abbr} ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n${fileLine} \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\n${commentLine}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
+}
+
+function renderGenericWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
+  const c = pad(count);
+  const fraction = `${c}/${c}`;
+  const totalLabel = count >= 2 ? 'URLs' : 'URL';
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  const immutableCls = immutable === 'None' ? 'hl-none' : 'hl-num';
+  const secCatCls = secCat === 'None' ? 'hl-none' : 'hl-name';
+  const abbr = VENDOR_WIKI_ABBR[vendor] || VENDOR_LABELS[vendor] || vendor;
+  const vendorLabel = VENDOR_LABELS[vendor] || vendor;
+  const pLabel = `P${priority}`;
+  const priorityLabel = `priority ${priority}`;
+  const commentAcceptedAt = wikiCommentUsesAcceptedAt(vendor, priority);
+  const fileUsesAccepted = wikiFileLineUsesAccepted(vendor, priority);
+  const fileUsesAcceptedAt = wikiFileLineUsesAcceptedAt(vendor, priority);
+
+  let fileHtml;
+  if (!fileUsesAccepted) {
+    fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
+  } else if (fileUsesAcceptedAt) {
+    fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>`;
+  } else {
+    fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted <span class="hl-ts">${acc}</span>`;
+  }
+
+  const commentHtml = commentAcceptedAt
+    ? `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>`
+    : `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
+
+  document.getElementById('wiki-message-gen').innerHTML =
+    `Hi Chisato-san,\n\n` +
+    `Done uploading/updating on GD the data from disputes <span class="hl-key">${abbr}</span> <span class="hl-key">${pLabel}</span> 2026 file (<span class="hl-num">${c} ${totalLabel}</span>). Thank you.\n\n` +
+    `${fileHtml} \n` +
+    `Total: <span class="hl-num">${c} ${totalLabel}</span> \n` +
+    `Categorized:<span class="hl-num">${fraction}</span> \n` +
+    `Uploaded on GD: <span class="hl-num">${fraction}</span>\n` +
+    `${commentHtml}\n\n` +
+    `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
+    `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
+    `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
+    `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
+}
+
+// ── WIKI: ZO ──
+function buildZOWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) {
+  const c = pad(count);
+  const fraction = `${c}/${c}`;
+  const totalLabel = count >= 2 ? 'URLs' : 'URL';
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  const vendorLabel = VENDOR_LABELS[vendor] || vendor;
+  const pLabel = `P${priority}`;
+  const priorityLabel = `priority ${priority}`;
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes ZO ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
+}
+
+function renderZOWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
+  const c = pad(count);
+  const fraction = `${c}/${c}`;
+  const totalLabel = count >= 2 ? 'URLs' : 'URL';
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  const immutableCls = immutable === 'None' ? 'hl-none' : 'hl-zo-num';
+  const secCatCls = secCat === 'None' ? 'hl-none' : 'hl-name';
+  const vendorLabel = VENDOR_LABELS[vendor] || vendor;
+  const pLabel = `P${priority}`;
+  const priorityLabel = `priority ${priority}`;
+  document.getElementById('wiki-message-zo').innerHTML =
+    `Hi Chisato-san,\n\n` +
+    `Done uploading/updating on GD the data from disputes <span class="hl-key">ZO</span> <span class="hl-key">${pLabel}</span> 2026 file (<span class="hl-zo-num">${c} ${totalLabel}</span>). Thank you.\n\n` +
+    `[Mail] Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span> UTC \n` +
+    `Total: <span class="hl-zo-num">${c} ${totalLabel}</span> \n` +
+    `Categorized:<span class="hl-zo-num">${fraction}</span> \n` +
+    `Uploaded on GD: <span class="hl-zo-num">${fraction}</span>\n` +
+    `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>\n\n` +
+    `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
+    `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
+    `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
+    `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
+}
+
+// ── WIKI: AZ ──
+function buildAZWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) {
+  const c = pad(count);
+  const fraction = `${c}/${c}`;
+  const totalLabel = count >= 2 ? 'URLs' : 'URL';
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  const vendorLabel = VENDOR_LABELS[vendor] || vendor;
+  const pLabel = `P${priority}`;
+  const priorityLabel = `priority ${priority}`;
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes AZ ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
+}
+
+function renderAZWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
+  const c = pad(count);
+  const fraction = `${c}/${c}`;
+  const totalLabel = count >= 2 ? 'URLs' : 'URL';
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  const immutableCls = immutable === 'None' ? 'hl-none' : 'hl-az-num';
+  const secCatCls = secCat === 'None' ? 'hl-none' : 'hl-name';
+  const vendorLabel = VENDOR_LABELS[vendor] || vendor;
+  const pLabel = `P${priority}`;
+  const priorityLabel = `priority ${priority}`;
+  document.getElementById('wiki-message-az').innerHTML =
+    `Hi Chisato-san,\n\n` +
+    `Done uploading/updating on GD the data from disputes <span class="hl-key">AZ</span> <span class="hl-key">${pLabel}</span> 2026 file (<span class="hl-az-num">${c} ${totalLabel}</span>). Thank you.\n\n` +
+    `[Mail] Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span> UTC \n` +
+    `Total: <span class="hl-az-num">${c} ${totalLabel}</span> \n` +
+    `Categorized:<span class="hl-az-num">${fraction}</span> \n` +
+    `Uploaded on GD: <span class="hl-az-num">${fraction}</span>\n` +
+    `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>\n\n` +
+    `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
+    `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
+    `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
+    `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
+}
+
 // ── PREVIEW ──
 function updatePreview() {
   const fn      = getFilename();
@@ -1442,6 +2253,29 @@ function updatePreview() {
   const previewSub = document.getElementById('preview-sub');
   const btn        = document.getElementById('genBtn');
   const banner     = document.getElementById('validation-banner');
+  const wikiSecCp  = document.getElementById('wiki-section-cp');
+  const wikiSecTw  = document.getElementById('wiki-section-tw');
+  const wikiSecGen = document.getElementById('wiki-section-gen');
+  const wikiSecZo  = document.getElementById('wiki-section-zo');
+  const wikiSecAz  = document.getElementById('wiki-section-az');
+  const wikiGenBadge = document.getElementById('wiki-gen-badge');
+  const wikiZoBadge  = document.getElementById('wiki-zo-badge');
+  const wikiAzBadge  = document.getElementById('wiki-az-badge');
+  const nsSection  = document.getElementById('ns-section');
+  const nsBadge    = document.getElementById('ns-badge-text');
+
+  // CP2 stats (only relevant for CP P2)
+  const cp2Section = document.getElementById('cp2Section');
+  const showCp2 = (v === 'checkpoint' && selectedPriority === 2);
+  cp2Section.classList.toggle('visible', showCp2);
+  if (showCp2) {
+    const dupes = parseInt(document.getElementById('cp2Duplicates').value, 10) || 0;
+    const uploadedCount = Math.max(0, rows.length - dupes);
+    document.getElementById('statTotal').textContent = rows.length;
+    document.getElementById('statCategorized').textContent = `${pad(rows.length)}/${pad(rows.length)}`;
+    document.getElementById('statDuplicatesDisplay').textContent = `${pad(dupes)} URL${dupes === 1 ? '' : 's'}`;
+    document.getElementById('statUploaded').textContent = `${pad(uploadedCount)}/${pad(rows.length)}`;
+  }
 
   if (hasInvalid) {
     const msgs = [];
@@ -1479,45 +2313,98 @@ function updatePreview() {
     btn.disabled = true;
   }
 
-  // Checkpoint wiki — only for Priority 1
-  const wikiCp = document.getElementById('wiki-section-cp');
+  // CP wiki
   if (v === 'checkpoint' && selectedPriority === 1 && acc && rows.length > 0) {
-    wikiCp.classList.add('visible');
+    wikiSecCp.classList.add('visible');
     renderCPWiki(acc, rows.length, name, document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
   } else {
-    wikiCp.classList.remove('visible');
+    wikiSecCp.classList.remove('visible');
   }
 
   // TW wiki
-  const wikiTw = document.getElementById('wiki-section-tw');
   if (v === 'tw' && acc && rows.length > 0) {
-    wikiTw.classList.add('visible');
+    wikiSecTw.classList.add('visible');
     renderTWWiki(acc, rows.length, document.getElementById('twImmutable').value, document.getElementById('twSecurityCat').value);
   } else {
-    wikiTw.classList.remove('visible');
+    wikiSecTw.classList.remove('visible');
+  }
+
+  // Generic wiki
+  if (GENERIC_WIKI_VENDORS.includes(v) && acc && rows.length > 0) {
+    wikiSecGen.classList.add('visible');
+    wikiGenBadge.textContent = `${VENDOR_LABELS[v]} P${selectedPriority} only`;
+    renderGenericWiki(v, selectedPriority, acc, rows.length,
+      document.getElementById('genImmutable').value,
+      document.getElementById('genSecurityCat').value);
+  } else {
+    wikiSecGen.classList.remove('visible');
+  }
+
+  // ZO wiki
+  if (v === 'zo' && acc && rows.length > 0) {
+    wikiSecZo.classList.add('visible');
+    wikiZoBadge.textContent = `ZO P${selectedPriority} only`;
+    renderZOWiki(v, selectedPriority, acc, rows.length,
+      document.getElementById('zoImmutable').value,
+      document.getElementById('zoSecurityCat').value);
+  } else {
+    wikiSecZo.classList.remove('visible');
+  }
+
+  // AZ wiki
+  if (v === 'az' && acc && rows.length > 0) {
+    wikiSecAz.classList.add('visible');
+    wikiAzBadge.textContent = `AZ P${selectedPriority} only`;
+    renderAZWiki(v, selectedPriority, acc, rows.length,
+      document.getElementById('azImmutable').value,
+      document.getElementById('azSecurityCat').value);
+  } else {
+    wikiSecAz.classList.remove('visible');
+  }
+
+  // NS Manager — shown when wiki Security Category has a number
+  const wikiSecNum = getWikiSecurityNumber();
+  if (v && wikiSecNum !== null) {
+    nsSection.classList.add('visible');
+    nsBadge.textContent = `${VENDOR_LABELS[v] || v} P${selectedPriority} · ${wikiSecNum} security URL${wikiSecNum === 1 ? '' : 's'}`;
+    renderNSReport();
+  } else {
+    nsSection.classList.remove('visible');
   }
 }
 
 // ── COPY WIKI ──
-function copyWiki(vendor) {
+function copyWiki(variant) {
   const v    = document.getElementById('vendor').value;
   const acc  = document.getElementById('accepted').value.trim();
   const rows = getUrls();
-  if (!acc || !rows.length) return;
+  const name = getCpName();
 
   let text = '';
-  if (vendor === 'cp' && v === 'checkpoint' && selectedPriority === 1) {
-    text = buildCPWikiText(acc, rows.length, getCpName(), document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
-  } else if (vendor === 'tw' && v === 'tw') {
+  if (variant === 'cp' && v === 'checkpoint' && selectedPriority === 1 && acc && rows.length) {
+    text = buildCPWikiText(acc, rows.length, name, document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
+  } else if (variant === 'tw' && v === 'tw' && acc && rows.length) {
     text = buildTWWikiText(acc, rows.length, document.getElementById('twImmutable').value, document.getElementById('twSecurityCat').value);
+  } else if (variant === 'gen' && GENERIC_WIKI_VENDORS.includes(v) && acc && rows.length) {
+    text = buildGenericWikiText(v, selectedPriority, acc, rows.length,
+      document.getElementById('genImmutable').value,
+      document.getElementById('genSecurityCat').value);
+  } else if (variant === 'zo' && v === 'zo' && acc && rows.length) {
+    text = buildZOWikiText(v, selectedPriority, acc, rows.length,
+      document.getElementById('zoImmutable').value,
+      document.getElementById('zoSecurityCat').value);
+  } else if (variant === 'az' && v === 'az' && acc && rows.length) {
+    text = buildAZWikiText(v, selectedPriority, acc, rows.length,
+      document.getElementById('azImmutable').value,
+      document.getElementById('azSecurityCat').value);
   } else {
     return;
   }
 
   navigator.clipboard.writeText(text).then(() => {
-    const btn   = document.getElementById(`copy-btn-${vendor}`);
-    const icon  = document.getElementById(`copy-icon-${vendor}`);
-    const label = document.getElementById(`copy-label-${vendor}`);
+    const btn   = document.getElementById(`copy-btn-${variant}`);
+    const icon  = document.getElementById(`copy-icon-${variant}`);
+    const label = document.getElementById(`copy-label-${variant}`);
     btn.classList.add('copied');
     icon.textContent  = '✓';
     label.textContent = 'Copied!';
@@ -1542,7 +2429,6 @@ function generate() {
   const wsData = rows.map(({ url, cat, sec, secCat }) => {
     const hasSecurityCat = secCat !== null && secCat !== undefined && secCat !== '';
     const colD = hasSecurityCat ? secCat : 99999;
-    // Column E (Immutable) is intentionally left blank for all vendors on export.
     return [
       url,
       cat !== null && cat !== undefined ? cat : null,
