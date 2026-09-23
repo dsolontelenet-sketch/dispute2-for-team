@@ -4,25 +4,33 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Disputes File Generator — Team</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%237c3aed'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-weight='700' font-size='40' fill='white'>D</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%2300d4ff'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-weight='700' font-size='40' fill='white'>D</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- Firebase (compat SDK) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 
   :root {
-    --bg: #0d0f14;
+    --bg: #0a0c11;
+    --bg-elev: #0f1218;
     --panel: #13161e;
+    --panel-2: #171b25;
     --border: #1f2535;
+    --border-soft: #262d40;
     --accent: #00d4ff;
-    --text: #e2e8f0;
+    --accent-dim: #00a8cc;
+    --text: #e6ecf5;
+    --text-soft: #b8c2d4;
     --muted: #6b7a99;
     --success: #00e5a0;
     --danger: #ff4d4d;
+    --warning: #ffb84d;
+
     --wiki-bg: #0e1520;
     --wiki-border: #1a2a3a;
     --wiki-accent: #4db8ff;
@@ -45,53 +53,170 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html, body { height: 100%; }
+
   body {
     background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 212, 255, 0.08), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 100%, rgba(124, 58, 237, 0.05), transparent 60%);
+    background-attachment: fixed;
     color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  .app-shell {
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 2rem;
     min-height: 100vh;
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 2rem;
+    flex-direction: column;
+    gap: 1.5rem;
   }
 
-  .container { width: 100%; max-width: 720px; }
+  .main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 720px);
+    justify-content: center;
+    gap: 1.5rem;
+    align-items: start;
+    transition: grid-template-columns 0.25s ease;
+  }
+  .main-grid.with-wiki {
+    grid-template-columns: minmax(0, 720px) minmax(0, 620px);
+    justify-content: center;
+  }
 
-  .header { margin-bottom: 2rem; }
+  .col-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+
+  .col-right {
+    display: none;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+  .main-grid.with-wiki .col-right { display: flex; }
+
+  .header { margin-bottom: 0; }
   .header h1 {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.1rem; font-weight: 600;
-    color: var(--accent); letter-spacing: 0.08em;
-    text-transform: uppercase; margin-bottom: 0.4rem;
+    font-size: 1.05rem; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 0.35rem;
   }
-  .header p { font-size: 0.85rem; color: var(--muted); font-weight: 300; }
+  .header p { font-size: 0.82rem; color: var(--muted); font-weight: 400; }
+
+  .header-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .user-chip {
+    display: flex; align-items: center; gap: 0.55rem;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 100px; padding: 0.3rem 0.85rem 0.3rem 0.3rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    transition: border-color 0.15s;
+  }
+  .user-chip:hover { border-color: var(--border-soft); }
+  .user-chip .avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    color: #0a0c11;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.62rem; flex-shrink: 0;
+    overflow: hidden;
+  }
+  .user-chip .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .user-chip .uname { color: var(--text-soft); font-weight: 500; }
+
+  .logout-btn {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.42rem 0.85rem;
+    color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem; cursor: pointer; transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+  .logout-btn:hover {
+    border-color: var(--danger); color: var(--danger);
+    background: rgba(255,77,77,0.06);
+  }
+
+  /* 🆕 Rotation status badge */
+  .rotation-status {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 100px; padding: 0.28rem 0.75rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+    color: var(--text-soft);
+    transition: all 0.15s;
+  }
+  .rotation-status .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--muted);
+  }
+  .rotation-status.is-me {
+    border-color: rgba(0,229,160,0.5);
+    background: rgba(0,229,160,0.08);
+    color: var(--success);
+  }
+  .rotation-status.is-me .dot {
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+    animation: pulseGreen 1.8s ease-in-out infinite;
+  }
+  .rotation-status.not-me {
+    border-color: rgba(255,184,77,0.35);
+    background: rgba(255,184,77,0.06);
+    color: var(--warning);
+  }
+  .rotation-status.not-me .dot { background: var(--warning); }
+  @keyframes pulseGreen {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(1.2); }
+  }
 
   .card {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
 
   .field { margin-bottom: 1.5rem; }
 
   label {
-    display: block; font-size: 0.75rem; font-weight: 600;
-    letter-spacing: 0.1em; text-transform: uppercase;
+    display: block; font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
     color: var(--muted); margin-bottom: 0.5rem;
     font-family: 'IBM Plex Mono', monospace;
   }
 
-  select, input[type="text"], input[type="number"] {
-    width: 100%; background: var(--bg);
+  select, input[type="text"], input[type="number"], input[type="email"], input[type="password"] {
+    width: 100%; background: var(--bg-elev);
     border: 1px solid var(--border); border-radius: 8px;
-    padding: 0.75rem 1rem; color: var(--text);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem;
-    outline: none; transition: border-color 0.2s; appearance: none;
+    padding: 0.72rem 1rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem;
+    outline: none; transition: border-color 0.15s, background 0.15s;
+    appearance: none;
   }
-  select:focus, input[type="text"]:focus, input[type="number"]:focus { border-color: var(--accent); }
-  select option { background: #1a1d28; }
+  select:focus, input:focus { border-color: var(--accent); background: var(--bg); }
+  select:focus { box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.08); }
+  select option { background: #1a1d28; color: var(--text); }
 
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -102,56 +227,18 @@
 
   .priority-btn {
     flex: 1; min-width: 80px; padding: 0.6rem;
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem;
     cursor: pointer; transition: all 0.15s; text-align: center;
   }
   .priority-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .priority-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
-
-  /* ── NAME FIELD (shown for all vendors) ── */
-  .cp-name-field { display: none; margin-bottom: 1.5rem; }
-  .cp-name-field.visible { display: block; }
-
-  .cp-name-inner { position: relative; }
-  .cp-name-inner input { padding-right: 2.2rem; }
-
-  .name-combo-caret {
-    position: absolute; right: 0.9rem; top: 50%; transform: translateY(-50%);
-    color: var(--muted); font-size: 0.7rem; pointer-events: none;
+  .priority-btn.active {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    box-shadow: 0 0 0 1px var(--accent) inset;
   }
 
-  .name-combo-dropdown {
-    display: none;
-    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
-    background: #1a1d28; border: 1px solid var(--border);
-    border-radius: 10px; padding: 0.5rem;
-    box-shadow: 0 14px 34px rgba(0,0,0,0.5);
-    z-index: 30; max-height: 260px; overflow-y: auto;
-  }
-  .name-combo-dropdown.open { display: block; }
-
-  .name-combo-list { display: flex; flex-direction: column; gap: 0.4rem; }
-
-  .name-combo-empty {
-    display: none; font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem;
-    color: var(--muted); padding: 0.7rem 0.3rem; text-align: center;
-  }
-  .name-combo-empty.visible { display: block; }
-
-  .name-combo-add {
-    display: none; width: 100%; margin-top: 0.4rem; padding: 0.6rem;
-    background: rgba(0,212,255,0.08); border: 1px dashed rgba(0,212,255,0.35);
-    border-radius: 8px; color: var(--accent);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem;
-    cursor: pointer; transition: all 0.15s; text-align: center;
-  }
-  .name-combo-add.visible { display: block; }
-  .name-combo-add:hover { background: rgba(0,212,255,0.14); }
-  .name-combo-add span { color: var(--text); font-weight: 600; }
-
-  /* ── URL SECTION ── */
   .url-header {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 0.75rem;
@@ -160,22 +247,27 @@
 
   .url-badge {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.7rem; color: var(--accent);
-    background: rgba(0,212,255,0.1);
-    border: 1px solid rgba(0,212,255,0.2);
-    border-radius: 20px; padding: 0.15rem 0.65rem;
+    font-size: 0.68rem; color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.18);
+    border-radius: 100px; padding: 0.18rem 0.7rem;
+    font-weight: 500;
   }
 
-  .mode-toggle { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
-  .mode-btn {
-    padding: 0.4rem 0.9rem;
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem;
-    cursor: pointer; transition: all 0.15s;
+  .mode-toggle {
+    display: inline-flex; gap: 0.25rem; margin-bottom: 1rem;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.25rem;
   }
-  .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+  .mode-btn {
+    padding: 0.45rem 1rem;
+    background: transparent; border: none;
+    border-radius: 6px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    cursor: pointer; transition: all 0.15s; font-weight: 500;
+  }
+  .mode-btn:hover { color: var(--text-soft); }
+  .mode-btn.active { color: var(--accent); background: rgba(0,212,255,0.1); }
 
   .url-col-headers {
     display: flex; align-items: center; gap: 0.5rem;
@@ -183,8 +275,9 @@
   }
   .url-col-label {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem; color: var(--muted);
+    font-size: 0.62rem; color: var(--muted);
     text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 500;
   }
   .url-col-label.url-lbl { flex: 1; }
   .url-col-label.cat-lbl { width: 90px; flex-shrink: 0; text-align: center; }
@@ -194,200 +287,166 @@
   .url-row { display: flex; align-items: center; gap: 0.5rem; }
   .url-num {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.68rem; color: var(--muted);
+    font-size: 0.66rem; color: var(--muted);
     min-width: 18px; text-align: right; flex-shrink: 0;
   }
 
-  .url-row .inp-url { flex: 1; padding: 0.55rem 0.85rem; font-size: 0.82rem; }
-
-  .url-row .inp-cat {
-    width: 90px; flex-shrink: 0;
-    padding: 0.55rem 0.6rem; font-size: 0.82rem;
-    text-align: center;
-    border-color: rgba(0,212,255,0.25);
-    color: var(--accent);
-  }
-  .url-row .inp-cat:focus { border-color: var(--accent); }
-  .url-row .inp-cat::placeholder { color: rgba(0,212,255,0.3); }
-
+  .url-row .inp-url { flex: 1; padding: 0.55rem 0.85rem; font-size: 0.8rem; }
+  .url-row .inp-cat,
   .url-row .inp-sec {
     width: 90px; flex-shrink: 0;
-    padding: 0.55rem 0.6rem; font-size: 0.82rem;
+    padding: 0.55rem 0.6rem; font-size: 0.8rem;
     text-align: center;
-    border-color: rgba(0,212,255,0.25);
+    border-color: rgba(0,212,255,0.22);
     color: var(--accent);
   }
+  .url-row .inp-cat:focus,
   .url-row .inp-sec:focus { border-color: var(--accent); }
+  .url-row .inp-cat::placeholder,
   .url-row .inp-sec::placeholder { color: rgba(0,212,255,0.3); }
 
   .url-row .inp-seccat {
     width: 110px; flex-shrink: 0;
-    padding: 0.55rem 0.6rem; font-size: 0.82rem;
+    padding: 0.55rem 0.6rem; font-size: 0.8rem;
     text-align: center;
-    border-color: rgba(251,146,60,0.35);
+    border-color: rgba(251,146,60,0.32);
     color: #fb923c;
   }
   .url-row .inp-seccat:focus { border-color: #fb923c; }
   .url-row .inp-seccat::placeholder { color: rgba(251,146,60,0.4); }
   .url-row .inp-seccat.has-error,
   .url-row .inp-cat.has-error,
-  .url-row .inp-sec.has-error { border-color: var(--danger); box-shadow: 0 0 0 1px rgba(255,77,77,0.3); }
+  .url-row .inp-sec.has-error {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgba(255,77,77,0.1);
+  }
 
   .url-del {
-    width: 28px; height: 28px; flex-shrink: 0;
+    width: 30px; height: 30px; flex-shrink: 0;
     background: transparent; border: 1px solid var(--border);
-    border-radius: 6px; color: var(--muted);
-    cursor: pointer; font-size: 0.8rem;
+    border-radius: 8px; color: var(--muted);
+    cursor: pointer; font-size: 0.78rem;
     display: flex; align-items: center; justify-content: center;
     transition: all 0.15s;
   }
-  .url-del:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,77,0.08); }
+  .url-del:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,77,0.06); }
 
   .url-add {
-    margin-top: 0.5rem; padding: 0.5rem;
+    margin-top: 0.5rem; padding: 0.55rem;
     background: transparent; border: 1px dashed var(--border);
     border-radius: 8px; color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem;
     cursor: pointer; width: 100%; transition: all 0.15s; text-align: center;
+    font-weight: 500;
   }
-  .url-add:hover { border-color: var(--accent); color: var(--accent); border-style: solid; }
+  .url-add:hover { border-color: var(--accent); color: var(--accent); border-style: solid; background: rgba(0,212,255,0.04); }
 
   #bulk-ta {
     width: 100%; min-height: 130px;
-    background: var(--bg); border: 1px solid var(--border);
+    background: var(--bg-elev); border: 1px solid var(--border);
     border-radius: 8px; padding: 0.75rem 1rem;
     color: var(--text); font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.82rem; outline: none; resize: vertical;
-    transition: border-color 0.2s; line-height: 1.7;
+    font-size: 0.8rem; outline: none; resize: vertical;
+    transition: border-color 0.15s; line-height: 1.7;
   }
-  #bulk-ta:focus { border-color: var(--accent); }
+  #bulk-ta:focus { border-color: var(--accent); background: var(--bg); }
   #bulk-ta::placeholder { color: var(--muted); }
 
   .preview-box {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; padding: 1rem; margin-top: 1.5rem;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem 1.15rem; margin-top: 1.5rem;
   }
   .preview-box .lbl {
-    font-size: 0.7rem; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem; font-family: 'IBM Plex Mono', monospace;
     color: var(--muted); text-transform: uppercase;
-    letter-spacing: 0.1em; margin-bottom: 0.4rem;
+    letter-spacing: 0.12em; margin-bottom: 0.5rem;
+    font-weight: 600;
   }
   .preview-fn {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.85rem; color: var(--success); word-break: break-all;
+    font-size: 0.82rem; color: var(--success); word-break: break-all;
+    font-weight: 500;
   }
   .preview-sub {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.7rem; color: var(--muted); margin-top: 0.4rem;
+    font-size: 0.68rem; color: var(--muted); margin-top: 0.4rem;
   }
 
   .validation-banner {
     display: none;
-    background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.35);
+    background: rgba(255,77,77,0.07); border: 1px solid rgba(255,77,77,0.3);
     border-radius: 8px; padding: 0.75rem 1rem; margin-top: 1rem;
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem;
-    color: var(--danger); line-height: 1.6;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem;
+    color: #ff8a8a; line-height: 1.6;
   }
   .validation-banner.visible { display: block; }
 
   .btn-generate {
     width: 100%; margin-top: 1.5rem; padding: 1rem;
-    background: var(--accent); border: none; border-radius: 8px;
-    color: #0d0f14; font-family: 'IBM Plex Mono', monospace;
-    font-weight: 600; font-size: 0.9rem; letter-spacing: 0.05em;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    border: none; border-radius: 10px;
+    color: #0a0c11; font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600; font-size: 0.88rem; letter-spacing: 0.06em;
     cursor: pointer; transition: all 0.2s;
+    text-transform: uppercase;
   }
-  .btn-generate:hover { background: #33dcff; transform: translateY(-1px); }
-  .btn-generate:active { transform: translateY(0); }
-  .btn-generate:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+  .btn-generate:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0, 212, 255, 0.25); }
+  .btn-generate:active:not(:disabled) { transform: translateY(0); }
+  .btn-generate:disabled {
+    background: var(--panel-2); color: var(--muted); cursor: not-allowed;
+    box-shadow: none;
+  }
 
-  .hint { font-size: 0.74rem; color: var(--muted); margin-top: 0.3rem; }
+  .hint { font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem; }
   .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
 
-  /* ── WIKI MESSAGE SECTION (shared) ── */
   .wiki-section {
-    margin-top: 1.5rem;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
     display: none;
   }
   .wiki-section.visible { display: block; }
 
   .wiki-section.variant-cp { border: 1px solid var(--wiki-border); }
-  .wiki-section.variant-cp .wiki-header {
-    background: rgba(77,184,255,0.06);
-    border-bottom: 1px solid var(--wiki-border);
-  }
+  .wiki-section.variant-cp .wiki-header { background: rgba(77,184,255,0.06); border-bottom: 1px solid var(--wiki-border); }
   .wiki-section.variant-cp .wiki-title  { color: var(--wiki-accent); }
-  .wiki-section.variant-cp .wiki-badge  {
-    background: rgba(77,184,255,0.15);
-    border: 1px solid rgba(77,184,255,0.3);
-    color: var(--wiki-accent);
-  }
+  .wiki-section.variant-cp .wiki-badge  { background: rgba(77,184,255,0.15); border: 1px solid rgba(77,184,255,0.3); color: var(--wiki-accent); }
   .wiki-section.variant-cp .wiki-body   { background: var(--wiki-bg); }
   .wiki-section.variant-cp .copy-btn    { border-color: var(--wiki-border); }
   .wiki-section.variant-cp .copy-btn:hover  { border-color: var(--wiki-accent); color: var(--wiki-accent); }
   .wiki-section.variant-cp .copy-btn.copied { border-color: var(--success); color: var(--success); }
 
   .wiki-section.variant-tw { border: 1px solid var(--wiki-tw-border); }
-  .wiki-section.variant-tw .wiki-header {
-    background: rgba(77,255,136,0.05);
-    border-bottom: 1px solid var(--wiki-tw-border);
-  }
+  .wiki-section.variant-tw .wiki-header { background: rgba(77,255,136,0.05); border-bottom: 1px solid var(--wiki-tw-border); }
   .wiki-section.variant-tw .wiki-title  { color: var(--wiki-tw-accent); }
-  .wiki-section.variant-tw .wiki-badge  {
-    background: rgba(77,255,136,0.12);
-    border: 1px solid rgba(77,255,136,0.25);
-    color: var(--wiki-tw-accent);
-  }
+  .wiki-section.variant-tw .wiki-badge  { background: rgba(77,255,136,0.12); border: 1px solid rgba(77,255,136,0.25); color: var(--wiki-tw-accent); }
   .wiki-section.variant-tw .wiki-body   { background: var(--wiki-tw-bg); }
   .wiki-section.variant-tw .copy-btn    { border-color: var(--wiki-tw-border); }
   .wiki-section.variant-tw .copy-btn:hover  { border-color: var(--wiki-tw-accent); color: var(--wiki-tw-accent); }
   .wiki-section.variant-tw .copy-btn.copied { border-color: var(--success); color: var(--success); }
 
   .wiki-section.variant-gen { border: 1px solid var(--wiki-gen-border); }
-  .wiki-section.variant-gen .wiki-header {
-    background: rgba(255,209,102,0.06);
-    border-bottom: 1px solid var(--wiki-gen-border);
-  }
+  .wiki-section.variant-gen .wiki-header { background: rgba(255,209,102,0.06); border-bottom: 1px solid var(--wiki-gen-border); }
   .wiki-section.variant-gen .wiki-title  { color: var(--wiki-gen-accent); }
-  .wiki-section.variant-gen .wiki-badge  {
-    background: rgba(255,209,102,0.15);
-    border: 1px solid rgba(255,209,102,0.3);
-    color: var(--wiki-gen-accent);
-  }
+  .wiki-section.variant-gen .wiki-badge  { background: rgba(255,209,102,0.15); border: 1px solid rgba(255,209,102,0.3); color: var(--wiki-gen-accent); }
   .wiki-section.variant-gen .wiki-body   { background: var(--wiki-gen-bg); }
   .wiki-section.variant-gen .copy-btn    { border-color: var(--wiki-gen-border); }
   .wiki-section.variant-gen .copy-btn:hover  { border-color: var(--wiki-gen-accent); color: var(--wiki-gen-accent); }
   .wiki-section.variant-gen .copy-btn.copied { border-color: var(--success); color: var(--success); }
 
   .wiki-section.variant-zo { border: 1px solid var(--wiki-zo-border); }
-  .wiki-section.variant-zo .wiki-header {
-    background: rgba(77,208,225,0.06);
-    border-bottom: 1px solid var(--wiki-zo-border);
-  }
+  .wiki-section.variant-zo .wiki-header { background: rgba(77,208,225,0.06); border-bottom: 1px solid var(--wiki-zo-border); }
   .wiki-section.variant-zo .wiki-title  { color: var(--wiki-zo-accent); }
-  .wiki-section.variant-zo .wiki-badge  {
-    background: rgba(77,208,225,0.15);
-    border: 1px solid rgba(77,208,225,0.3);
-    color: var(--wiki-zo-accent);
-  }
+  .wiki-section.variant-zo .wiki-badge  { background: rgba(77,208,225,0.15); border: 1px solid rgba(77,208,225,0.3); color: var(--wiki-zo-accent); }
   .wiki-section.variant-zo .wiki-body   { background: var(--wiki-zo-bg); }
   .wiki-section.variant-zo .copy-btn    { border-color: var(--wiki-zo-border); }
   .wiki-section.variant-zo .copy-btn:hover  { border-color: var(--wiki-zo-accent); color: var(--wiki-zo-accent); }
   .wiki-section.variant-zo .copy-btn.copied { border-color: var(--success); color: var(--success); }
 
   .wiki-section.variant-az { border: 1px solid var(--wiki-az-border); }
-  .wiki-section.variant-az .wiki-header {
-    background: rgba(225,77,208,0.06);
-    border-bottom: 1px solid var(--wiki-az-border);
-  }
+  .wiki-section.variant-az .wiki-header { background: rgba(225,77,208,0.06); border-bottom: 1px solid var(--wiki-az-border); }
   .wiki-section.variant-az .wiki-title  { color: var(--wiki-az-accent); }
-  .wiki-section.variant-az .wiki-badge  {
-    background: rgba(225,77,208,0.15);
-    border: 1px solid rgba(225,77,208,0.3);
-    color: var(--wiki-az-accent);
-  }
+  .wiki-section.variant-az .wiki-badge  { background: rgba(225,77,208,0.15); border: 1px solid rgba(225,77,208,0.3); color: var(--wiki-az-accent); }
   .wiki-section.variant-az .wiki-body   { background: var(--wiki-az-bg); }
   .wiki-section.variant-az .copy-btn    { border-color: var(--wiki-az-border); }
   .wiki-section.variant-az .copy-btn:hover  { border-color: var(--wiki-az-accent); color: var(--wiki-az-accent); }
@@ -395,31 +454,29 @@
 
   .wiki-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1rem; gap: 0.75rem;
   }
   .wiki-title {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.72rem; font-weight: 600;
+    font-size: 0.7rem; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.1em;
-    display: flex; align-items: center; gap: 0.5rem;
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
   }
-  .wiki-badge {
-    font-size: 0.65rem;
-    border-radius: 20px; padding: 0.1rem 0.5rem;
-  }
+  .wiki-badge { font-size: 0.62rem; border-radius: 100px; padding: 0.12rem 0.55rem; font-weight: 500; }
 
   .copy-btn {
-    background: transparent;
-    border-radius: 6px; padding: 0.3rem 0.75rem; color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.32rem 0.75rem; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;
     cursor: pointer; transition: all 0.15s;
     display: flex; align-items: center; gap: 0.35rem;
+    flex-shrink: 0;
   }
 
   .wiki-body { padding: 1.1rem 1.25rem; }
 
   .wiki-message {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem;
     line-height: 1.85; color: var(--text);
     white-space: pre-wrap; word-break: break-word;
   }
@@ -435,285 +492,531 @@
   .wiki-message .hl-zo-num { color: var(--wiki-zo-accent); }
   .wiki-message .hl-az-num { color: var(--wiki-az-accent); }
 
-  /* ── Name pill ── */
-  .name-pill {
-    display: flex; align-items: center; gap: 0.7rem;
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 10px; padding: 0.5rem 0.5rem 0.5rem 0.7rem;
-    transition: all 0.15s;
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem;
-  }
-  .name-pill:hover { border-color: var(--accent); background: rgba(0,212,255,0.06); }
-  .name-pill .avatar {
-    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
-    background: var(--accent); color: #0d0f14;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 600; font-size: 0.7rem;
-  }
-  .name-pill .pill-label {
-    flex: 1; cursor: pointer; min-width: 0;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .name-pill .pill-edit-input {
-    flex: 1; min-width: 0; background: var(--panel);
-    border: 1px solid var(--accent); border-radius: 6px;
-    padding: 0.3rem 0.5rem; color: var(--text);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; outline: none;
-  }
-  .name-pill .pill-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
-  .name-pill .pill-icon-btn {
-    width: 24px; height: 24px; flex-shrink: 0;
-    background: transparent; border: 1px solid var(--border);
-    border-radius: 6px; color: var(--muted);
-    cursor: pointer; font-size: 0.7rem;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s;
-  }
-  .name-pill .pill-icon-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
-  .name-pill .pill-icon-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,77,0.08); }
-  .name-pill .pill-icon-btn.confirm { border-color: var(--success); color: var(--success); }
-
-  /* ── Confirm dialog ── */
   .confirm-overlay {
-    position: fixed; inset: 0; background: rgba(5,6,10,0.88);
+    position: fixed; inset: 0; background: rgba(5,6,10,0.85);
     display: flex; align-items: center; justify-content: center;
-    z-index: 1100; backdrop-filter: blur(3px);
+    z-index: 1100; backdrop-filter: blur(6px);
+    padding: 1.5rem; overflow-y: auto;
   }
   .confirm-overlay.hidden { display: none; }
   .confirm-card {
-    width: 100%; max-width: 360px;
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 14px; padding: 1.5rem;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+    width: 100%; max-width: 460px;
+    background: var(--panel); border: 1px solid var(--border-soft);
+    border-radius: 16px; padding: 1.75rem;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    margin: auto;
   }
   .confirm-card h3 {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.92rem;
     color: var(--text); letter-spacing: 0.02em; margin-bottom: 0.5rem;
+    font-weight: 600;
   }
   .confirm-card p {
-    font-size: 0.8rem; color: var(--muted); line-height: 1.5; margin-bottom: 1.25rem;
+    font-size: 0.8rem; color: var(--muted); line-height: 1.55; margin-bottom: 1.25rem;
   }
   .confirm-card p strong { color: var(--text); }
   .confirm-actions { display: flex; gap: 0.6rem; }
   .confirm-btn {
-    flex: 1; padding: 0.65rem; border-radius: 8px;
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; font-weight: 600;
+    flex: 1; padding: 0.75rem; border-radius: 9px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; font-weight: 600;
     cursor: pointer; transition: all 0.15s; border: 1px solid var(--border);
+    letter-spacing: 0.04em;
   }
   .confirm-btn.cancel { background: transparent; color: var(--muted); }
-  .confirm-btn.cancel:hover { border-color: var(--text); color: var(--text); }
+  .confirm-btn.cancel:hover { border-color: var(--text-soft); color: var(--text-soft); background: rgba(255,255,255,0.03); }
   .confirm-btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
   .confirm-btn.danger:hover { background: #ff6b6b; }
-  .confirm-btn.primary { background: var(--accent); color: #0d0f14; border-color: var(--accent); }
-  .confirm-btn.primary:hover { background: #33dcff; }
+  .confirm-btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-dim)); color: #0a0c11; border-color: transparent; }
+  .confirm-btn.primary:hover:not(:disabled) { box-shadow: 0 8px 20px rgba(0,212,255,0.3); }
   .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* ── CP P2 stats ── */
+  .gen-confirm-info {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem; margin-bottom: 1.25rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem;
+    line-height: 1.7;
+  }
+  .gen-confirm-info .row { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+  .gen-confirm-info .lbl { color: var(--muted); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; flex-shrink: 0; }
+  .gen-confirm-info .val { color: var(--text); text-align: right; word-break: break-word; font-weight: 500; }
+  .gen-confirm-info .val.accent { color: var(--accent); }
+  .gen-confirm-info .val.success { color: var(--success); }
+  .gen-confirm-info .divider-sm { border-top: 1px solid var(--border); margin: 0.6rem 0; }
+
+  /* 🆕 Rotation info box in modal */
+  .rot-info {
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.75rem 0.95rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.5;
+  }
+  .rot-info.your-turn {
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.35);
+    color: var(--success);
+  }
+  .rot-info.not-your-turn {
+    background: rgba(255,184,77,0.07);
+    border: 1px solid rgba(255,184,77,0.3);
+    color: var(--warning);
+  }
+  .rot-info .icon {
+    font-size: 1.05rem; line-height: 1; flex-shrink: 0;
+  }
+  .rot-info strong { color: #fff; font-weight: 600; }
+  .rot-info .sub { display: block; font-size: 0.66rem; opacity: 0.85; margin-top: 0.15rem; }
+
+  .gen-type-field { margin-bottom: 1rem; }
+  .gen-type-field > label {
+    display: block; font-size: 0.62rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 0.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .gen-type-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+  .gen-type-pill {
+    padding: 0.6rem 0.4rem;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    cursor: pointer; transition: all 0.15s; text-align: center;
+    font-weight: 500;
+    display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+  }
+  .gen-type-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .gen-type-pill.active {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(0,212,255,0.1);
+    box-shadow: 0 0 0 1px var(--accent) inset;
+  }
+
+  .dup-alert {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    background: rgba(255,77,77,0.08);
+    border: 1px solid rgba(255,77,77,0.3);
+    border-radius: 10px;
+    padding: 0.8rem 0.95rem;
+    margin-bottom: 1.1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; line-height: 1.55;
+    color: #ff8a8a;
+  }
+  .dup-alert.hidden { display: none; }
+  .dup-alert .icon { flex-shrink: 0; color: var(--danger); font-size: 0.95rem; line-height: 1.2; }
+  .dup-alert strong { color: #ffbaba; }
+
   .cp2-section { display: none; margin-bottom: 1.5rem; }
   .cp2-section.visible { display: block; }
 
   .cp2-block {
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.5rem;
   }
   .cp2-block-title {
     display: flex; align-items: center; gap: 0.6rem;
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
-    color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;
+    color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em;
     margin-bottom: 1.25rem; font-weight: 600;
   }
   .cp2-block-title .rule { width: 18px; height: 1px; background: var(--accent); }
 
-  .stat-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem;
-  }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
   .stat-card {
-    background: var(--bg); border: 1px solid var(--border);
+    background: var(--bg-elev); border: 1px solid var(--border);
     border-radius: 10px; padding: 0.9rem 0.75rem; text-align: center;
   }
   .stat-card .stat-value {
-    font-family: 'IBM Plex Mono', monospace; font-size: 1.15rem; font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 600;
     color: var(--accent); margin-bottom: 0.3rem;
   }
   .stat-card .stat-value.is-manual { color: #fb923c; }
   .stat-card .stat-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.62rem;
-    color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;
+    font-weight: 500;
   }
   .stat-card .stat-tag {
-    display: block; font-size: 0.55rem; color: var(--muted);
-    opacity: 0.6; margin-top: 0.15rem; letter-spacing: 0.08em;
+    display: block; font-size: 0.52rem; color: var(--muted);
+    opacity: 0.6; margin-top: 0.15rem; letter-spacing: 0.1em;
   }
 
-  .cp2-divider {
-    border: none; border-top: 1px solid var(--border); margin: 1.25rem 0 1rem;
-  }
+  .cp2-divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0 1rem; }
   .cp2-subhead {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
-    color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em;
-    margin-bottom: 1rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em;
+    margin-bottom: 1rem; font-weight: 600;
   }
 
   .manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
   .manual-field label small {
-    display: block; font-size: 0.62rem; color: var(--muted);
+    display: block; font-size: 0.6rem; color: var(--muted);
     text-transform: none; letter-spacing: 0; font-weight: 400;
     font-family: 'IBM Plex Sans', sans-serif; margin-top: 0.15rem;
   }
 
-  /* ── WIKI CONTROLS ── */
   .wiki-controls {
     display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
     padding: 0 1.25rem 1rem;
   }
-  .wiki-control-field label {
-    font-size: 0.62rem; margin-bottom: 0.3rem;
-  }
-  .wiki-control-field input {
-    padding: 0.5rem 0.7rem; font-size: 0.78rem;
-  }
-  .wiki-section.variant-cp .wiki-control-field input:focus { border-color: var(--wiki-accent); }
-  .wiki-section.variant-tw .wiki-control-field input:focus { border-color: var(--wiki-tw-accent); }
-  .wiki-section.variant-gen .wiki-control-field input:focus { border-color: var(--wiki-gen-accent); }
-  .wiki-section.variant-zo .wiki-control-field input:focus { border-color: var(--wiki-zo-accent); }
-  .wiki-section.variant-az .wiki-control-field input:focus { border-color: var(--wiki-az-accent); }
+  .wiki-control-field label { font-size: 0.6rem; margin-bottom: 0.3rem; }
+  .wiki-control-field input { padding: 0.5rem 0.7rem; font-size: 0.76rem; }
 
-  /* ── NS MANAGER REPORT ── */
   .ns-section {
-    margin-top: 1.5rem;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
     display: none;
     border: 1px solid var(--ns-border);
   }
   .ns-section.visible { display: block; }
-
   .ns-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0.75rem 1rem;
     background: rgba(192,132,252,0.06);
     border-bottom: 1px solid var(--ns-border);
+    gap: 0.75rem;
   }
   .ns-title {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.72rem; font-weight: 600;
+    font-size: 0.7rem; font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em; display: flex; align-items: center; gap: 0.5rem;
     color: var(--ns-accent);
+    flex-wrap: wrap;
   }
   .ns-badge {
-    font-size: 0.65rem;
-    border-radius: 20px; padding: 0.1rem 0.5rem;
+    font-size: 0.62rem; border-radius: 100px; padding: 0.12rem 0.55rem;
     background: rgba(192,132,252,0.15);
     border: 1px solid rgba(192,132,252,0.3);
     color: var(--ns-accent);
   }
-
   .ns-body { background: var(--ns-bg); padding: 1.25rem; }
-
   .ns-field { margin-bottom: 1.25rem; }
-
   .ns-field label {
-    display: block; font-size: 0.65rem; font-weight: 600;
+    display: block; font-size: 0.62rem; font-weight: 600;
     letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--muted); margin-bottom: 0.4rem;
     font-family: 'IBM Plex Mono', monospace;
   }
-
   .ns-field input[type="text"] {
-    width: 100%; background: var(--bg);
-    border: 1px solid var(--ns-border); border-radius: 6px;
+    width: 100%; background: var(--bg-elev);
+    border: 1px solid var(--ns-border); border-radius: 8px;
     padding: 0.6rem 0.85rem; color: var(--text);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem;
-    outline: none; transition: border-color 0.2s;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;
+    outline: none; transition: border-color 0.15s;
   }
   .ns-field input[type="text"]:focus { border-color: var(--ns-accent); }
-  .ns-field input[type="text"]::placeholder { color: rgba(192,132,252,0.4); }
+  .ns-field input[type="text"]::placeholder { color: rgba(192,132,252,0.35); }
 
   .ns-status-group { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-
   .ns-status-btn {
-    flex: 1; min-width: 60px; padding: 0.45rem 0.5rem;
-    background: var(--bg); border: 1px solid var(--ns-border);
-    border-radius: 6px; color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;
+    flex: 1; min-width: 60px; padding: 0.48rem 0.5rem;
+    background: var(--bg-elev); border: 1px solid var(--ns-border);
+    border-radius: 7px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
     cursor: pointer; transition: all 0.15s; text-align: center;
+    font-weight: 500;
   }
   .ns-status-btn:hover { border-color: var(--ns-accent); color: var(--ns-accent); }
-  .ns-status-btn.active { border-color: var(--ns-accent); color: var(--ns-accent); background: rgba(192,132,252,0.1); }
-
+  .ns-status-btn.active {
+    border-color: var(--ns-accent); color: var(--ns-accent);
+    background: rgba(192,132,252,0.1);
+  }
   .ns-change-fields {
-    display: none;
-    margin-top: 0.6rem;
-    padding: 0.75rem;
+    display: none; margin-top: 0.6rem; padding: 0.75rem;
     background: rgba(192,132,252,0.04);
     border: 1px dashed rgba(192,132,252,0.25);
-    border-radius: 6px;
+    border-radius: 8px;
   }
   .ns-change-fields.visible { display: block; }
-
   .ns-change-fields .ns-field { margin-bottom: 0.75rem; }
   .ns-change-fields .ns-field:last-child { margin-bottom: 0; }
 
   .ns-report-box {
-    background: var(--bg);
-    border: 1px solid var(--ns-border);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1rem;
+    background: var(--bg-elev); border: 1px solid var(--ns-border);
+    border-radius: 10px; padding: 1rem; margin-top: 1rem;
   }
   .ns-report-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.6rem; gap: 0.5rem;
   }
   .ns-report-box .lbl {
-    font-size: 0.65rem; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem; font-family: 'IBM Plex Mono', monospace;
     color: var(--muted); text-transform: uppercase;
-    letter-spacing: 0.1em; margin-bottom: 0;
+    letter-spacing: 0.12em; margin-bottom: 0; font-weight: 600;
   }
   .ns-report-message {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.78rem;
-    line-height: 1.8;
-    color: var(--text);
-    white-space: pre-wrap;
-    word-break: break-word;
+    font-size: 0.76rem; line-height: 1.8;
+    color: var(--text); white-space: pre-wrap; word-break: break-word;
   }
-
   .ns-report-message .hl-ns-url  { color: #c084fc; }
   .ns-report-message .hl-ns-ts   { color: #ffd166; }
   .ns-report-message .hl-ns-key  { color: var(--ns-accent); }
   .ns-report-message .hl-ns-arrow { color: #fb923c; }
   .ns-report-message .hl-ns-val  { color: var(--success); }
-
   .ns-copy-btn {
-    background: transparent;
-    border: 1px solid var(--ns-border);
-    border-radius: 6px;
-    padding: 0.3rem 0.75rem;
-    color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.72rem;
-    cursor: pointer;
-    transition: all 0.15s;
+    background: transparent; border: 1px solid var(--ns-border);
+    border-radius: 6px; padding: 0.32rem 0.75rem; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;
+    cursor: pointer; transition: all 0.15s;
     display: flex; align-items: center; gap: 0.35rem;
+    flex-shrink: 0;
   }
   .ns-copy-btn:hover { border-color: var(--ns-accent); color: var(--ns-accent); }
   .ns-copy-btn.copied { border-color: var(--success); color: var(--success); }
-
   .ns-divider { border: none; border-top: 1px solid var(--ns-border); margin: 1rem 0; }
 
+  /* AUTH */
+  .auth-screen {
+    width: 100%; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .auth-screen.hidden { display: none; }
+
+  .auth-shell {
+    width: 100%; max-width: 440px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 32px 100px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    max-height: calc(100vh - 4rem);
+  }
+  .auth-shell.register-mode { max-width: 560px; }
+
+  .auth-brand {
+    padding: 2rem 2rem 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,255,0.04), transparent);
+  }
+  .auth-brand .logo {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700;
+    font-size: 1.5rem; color: #0a0c11;
+    margin-bottom: 0.85rem;
+    box-shadow: 0 8px 24px rgba(0, 212, 255, 0.25);
+  }
+  .auth-brand h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.88rem; color: var(--text);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    font-weight: 600; margin-bottom: 0.35rem;
+  }
+  .auth-brand p { font-size: 0.76rem; color: var(--muted); letter-spacing: 0.02em; }
+
+  .auth-tabs {
+    display: flex; padding: 0.4rem;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    gap: 0.25rem;
+  }
+  .auth-tab {
+    flex: 1; padding: 0.7rem 0.5rem;
+    background: transparent; border: none;
+    border-radius: 8px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.74rem; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .auth-tab:hover { color: var(--text-soft); }
+  .auth-tab.active {
+    background: var(--panel); color: var(--accent);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  .auth-body {
+    padding: 1.75rem 2rem 2rem;
+    overflow-y: auto; flex: 1;
+  }
+  .auth-body::-webkit-scrollbar { width: 6px; }
+  .auth-body::-webkit-scrollbar-track { background: transparent; }
+  .auth-body::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 3px; }
+
+  .auth-field { margin-bottom: 1rem; }
+  .auth-field label {
+    display: block; font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 0.42rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .auth-field input {
+    width: 100%; background: var(--bg-elev);
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 0.75rem 0.95rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.84rem;
+    outline: none; transition: all 0.15s;
+  }
+  .auth-field input:focus {
+    border-color: var(--accent); background: var(--bg);
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.08);
+  }
+  .auth-field input::placeholder { color: var(--muted); opacity: 0.65; }
+
+  .auth-submit {
+    width: 100%; margin-top: 0.75rem; padding: 0.88rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    border: none; border-radius: 10px;
+    color: #0a0c11; font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700; font-size: 0.82rem; letter-spacing: 0.08em;
+    cursor: pointer; transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .auth-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(0, 212, 255, 0.32);
+  }
+  .auth-submit:active:not(:disabled) { transform: translateY(0); }
+  .auth-submit:disabled {
+    background: var(--panel-2); color: var(--muted);
+    cursor: not-allowed; transform: none; box-shadow: none;
+  }
+
+  .auth-msg {
+    display: none; margin-top: 1rem; padding: 0.75rem 0.95rem;
+    border-radius: 9px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; line-height: 1.55;
+  }
+  .auth-msg.visible { display: block; }
+  .auth-msg.error { background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.28); color: #ff8a8a; }
+  .auth-msg.ok { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.28); color: var(--success); }
+
+  .auth-footer {
+    margin-top: 1.25rem; padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    text-align: center; font-size: 0.7rem;
+    color: var(--muted); line-height: 1.55;
+  }
+
+  .agent-picker-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+  .agent-picker-wrap {
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.85rem;
+    background: var(--bg-elev);
+    max-height: 260px; overflow-y: auto;
+  }
+  .agent-picker-wrap::-webkit-scrollbar { width: 6px; }
+  .agent-picker-wrap::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 3px; }
+
+  .agent-picker-loading, .agent-picker-empty {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; color: var(--muted);
+    text-align: center; padding: 1.25rem 1rem;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem;
+    line-height: 1.5;
+  }
+  .agent-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.5rem;
+  }
+  .agent-pick-item {
+    display: flex; align-items: center; gap: 0.55rem;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.55rem 0.65rem;
+    cursor: pointer; transition: all 0.15s;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem;
+    position: relative;
+  }
+  .agent-pick-item:hover {
+    border-color: var(--accent); background: rgba(0,212,255,0.05);
+    transform: translateY(-1px);
+  }
+  .agent-pick-item.selected {
+    border-color: var(--accent); background: rgba(0,212,255,0.1);
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgba(0,212,255,0.15);
+  }
+  .agent-pick-item .ava {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.68rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    color: #0a0c11; overflow: hidden;
+  }
+  .agent-pick-item .ava img { width: 100%; height: 100%; object-fit: cover; }
+  .agent-pick-item .info { min-width: 0; flex: 1; }
+  .agent-pick-item .nm {
+    color: var(--text); font-weight: 600; font-size: 0.72rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .agent-pick-item .rl {
+    color: var(--muted); font-size: 0.6rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-top: 0.1rem;
+  }
+  .agent-pick-item .tick {
+    position: absolute; top: 0.4rem; right: 0.4rem;
+    color: var(--accent); font-weight: 700;
+    font-size: 0.75rem; opacity: 0; transition: opacity 0.15s;
+  }
+  .agent-pick-item.selected .tick { opacity: 1; }
+
+  .agent-picker-hint {
+    font-size: 0.68rem; color: var(--muted); margin-top: 0.55rem; line-height: 1.5;
+  }
+  .agent-picker-hint strong { color: var(--accent); font-weight: 600; }
+
+  .auth-loading {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem;
+    gap: 0.7rem; flex-direction: column;
+  }
+  .auth-loading .spinner { width: 32px; height: 32px; }
+  .spinner {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    animation: spin 0.75s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 1200px) {
+    .main-grid.with-wiki { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  }
+  @media (max-width: 980px) {
+    .main-grid,
+    .main-grid.with-wiki {
+      grid-template-columns: minmax(0, 1fr);
+      justify-content: stretch;
+    }
+    .col-right { display: none; }
+    .main-grid.with-wiki .col-right { display: flex; }
+  }
   @media (max-width: 640px) {
+    .app-shell { padding: 1rem; gap: 1rem; }
+    .card { padding: 1.5rem; border-radius: 12px; }
     .stat-grid { grid-template-columns: repeat(2, 1fr); }
     .manual-grid { grid-template-columns: 1fr; }
     .wiki-controls { grid-template-columns: 1fr; }
     .ns-status-group { flex-direction: column; }
+    .auth-shell { max-width: 100%; border-radius: 14px; }
+    .auth-shell.register-mode { max-width: 100%; }
+    .auth-brand { padding: 1.5rem 1.5rem 1.25rem; }
+    .auth-body { padding: 1.4rem 1.4rem 1.6rem; }
+    .header-bar { flex-wrap: wrap; }
+    .agent-picker-grid { grid-template-columns: repeat(2, 1fr); }
+    .gen-type-pills { grid-template-columns: 1fr; }
+    .url-col-headers { display: none; }
+    .url-row { flex-wrap: wrap; }
   }
 </style>
 </head>
 <body>
 
-<!-- Confirm dialog -->
+<!-- Generic confirm -->
 <div class="confirm-overlay hidden" id="confirmOverlay">
   <div class="confirm-card">
     <h3 id="confirmTitle">Are you sure?</h3>
@@ -725,416 +1028,519 @@
   </div>
 </div>
 
-<div class="container">
+<!-- Generate confirm -->
+<div class="confirm-overlay hidden" id="genConfirmOverlay">
+  <div class="confirm-card">
+    <h3>Are you sure this is correct dispute?</h3>
+    <p>It will be added to the Handling Monitoring dashboard as a ticket.</p>
+
+    <!-- 🆕 Rotation notice -->
+    <div class="rot-info hidden" id="genRotInfo">
+      <span class="icon" id="genRotIcon">✓</span>
+      <div id="genRotText">—</div>
+    </div>
+
+    <div class="dup-alert hidden" id="genDupAlert">
+      <span class="icon">⚠</span>
+      <div id="genDupText">—</div>
+    </div>
+
+    <div class="gen-confirm-info">
+      <div class="row">
+        <span class="lbl">Ticket Title</span>
+        <span class="val accent" id="genConfirmTitle">—</span>
+      </div>
+      <div class="divider-sm"></div>
+      <div class="row">
+        <span class="lbl">Vendor</span>
+        <span class="val" id="genConfirmVendor">—</span>
+      </div>
+      <div class="divider-sm"></div>
+      <div class="row">
+        <span class="lbl">Priority</span>
+        <span class="val" id="genConfirmPriority">—</span>
+      </div>
+      <div class="divider-sm"></div>
+      <div class="row">
+        <span class="lbl">Assigned To</span>
+        <span class="val success" id="genConfirmAssignee">—</span>
+      </div>
+      <div class="divider-sm"></div>
+      <div class="row">
+        <span class="lbl">URLs</span>
+        <span class="val" id="genConfirmUrls">—</span>
+      </div>
+    </div>
+
+    <div class="gen-type-field">
+      <label>Ticket Type</label>
+      <div class="gen-type-pills">
+        <button type="button" class="gen-type-pill active" data-type="Dispute" onclick="selectGenType(this)">⚡ Dispute</button>
+        <button type="button" class="gen-type-pill" data-type="Inquiry" onclick="selectGenType(this)">💬 Inquiry</button>
+        <button type="button" class="gen-type-pill" data-type="Partner Portal" onclick="selectGenType(this)">🔗 Partner Portal</button>
+      </div>
+    </div>
+
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" onclick="closeGenConfirm()">No, Go Back</button>
+      <button class="confirm-btn primary" id="genConfirmYesBtn" onclick="confirmGenerate()">Yes, Generate & Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-shell" id="authShell">
+    <div class="auth-brand">
+      <div class="logo">D</div>
+      <h1>Disputes File Generator</h1>
+      <p id="authBrandSub">Sign in to your team account</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="setAuthTab('login')">Login</button>
+      <button class="auth-tab" id="tabRegister" onclick="setAuthTab('register')">Register</button>
+    </div>
+
+    <div class="auth-body">
+      <div id="loginForm">
+        <div class="auth-field">
+          <label>Email Address</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password"
+                 onkeydown="if(event.key==='Enter') doLogin()" />
+        </div>
+        <button class="auth-submit" id="loginBtn" onclick="doLogin()">Sign In</button>
+        <div class="auth-footer">
+          Don't have an account? Click <strong style="color:var(--accent);">Register</strong> above to create one.
+        </div>
+      </div>
+
+      <div id="registerForm" class="hidden">
+        <div class="auth-field">
+          <label>Full Name</label>
+          <input type="text" id="regName" placeholder="e.g. Juan Dela Cruz" autocomplete="name" />
+        </div>
+        <div class="auth-field">
+          <label>Email Address</label>
+          <input type="email" id="regEmail" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="regPassword" placeholder="Minimum 6 characters" autocomplete="new-password" />
+        </div>
+        <div class="auth-field">
+          <label>Confirm Password</label>
+          <input type="password" id="regPassword2" placeholder="Re-enter password" autocomplete="new-password" />
+        </div>
+
+        <div style="margin: 1.25rem 0 0.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border);">
+          <div class="agent-picker-head">
+            <label style="margin-bottom:0;">Select Your Agent</label>
+            <span style="font-size:0.62rem; color:var(--muted); font-family:'IBM Plex Mono',monospace; letter-spacing:0.05em;">FROM MONITORING</span>
+          </div>
+          <div class="agent-picker-wrap">
+            <div id="agentPickerContent" class="agent-picker-loading">
+              <div class="spinner"></div>
+              <span>Loading agents…</span>
+            </div>
+          </div>
+          <p class="agent-picker-hint" id="agentPickerHint">
+            This agent name will appear in filenames and pushed tickets to Monitoring.
+          </p>
+        </div>
+
+        <button class="auth-submit" id="registerBtn" onclick="doRegister()">Create Account</button>
+
+        <div class="auth-footer">
+          Already have an account? Click <strong style="color:var(--accent);">Login</strong> above.
+        </div>
+      </div>
+
+      <div class="auth-msg" id="authMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="auth-loading hidden" id="loadingScreen">
+  <div class="spinner"></div>
+  <span>Checking session…</span>
+</div>
+
+<!-- MAIN APP -->
+<div class="app-shell hidden" id="mainApp">
   <div class="header">
-    <h1>Disputes File Generator — Team</h1>
+    <div class="header-bar">
+      <h1>Disputes File Generator — Team</h1>
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <!-- 🆕 Rotation status -->
+        <span class="rotation-status" id="rotStatus">
+          <span class="dot"></span>
+          <span id="rotStatusText">Checking rotation…</span>
+        </span>
+        <div class="user-chip">
+          <span class="avatar" id="userAvatar">?</span>
+          <span class="uname" id="userName">—</span>
+        </div>
+        <button class="logout-btn" onclick="doLogout()">Logout</button>
+      </div>
+    </div>
     <p>Generate formatted Excel dispute files with correct filenames</p>
   </div>
 
-  <div class="card">
+  <div class="main-grid" id="mainGrid">
 
-    <!-- Vendor -->
-    <div class="field">
-      <label>Vendor</label>
-      <select id="vendor" onchange="onVendorChange()">
-        <option value="">— Select vendor —</option>
-        <option value="barracuda">Barracuda</option>
-        <option value="zo">ZO</option>
-        <option value="az">AZ</option>
-        <option value="checkpoint">Checkpoint</option>
-        <option value="microsoft">Microsoft</option>
-        <option value="os">OS</option>
-        <option value="is">IS</option>
-        <option value="tw">TW</option>
-        <option value="so">SO</option>
-        <option value="fs">FS</option>
-        <option value="jn">JN</option>
-        <option value="hn">HN</option>
-        <option value="partnerportal">Partner Portal</option>
-      </select>
-    </div>
+    <!-- LEFT COLUMN -->
+    <div class="col-left">
 
-    <!-- Priority -->
-    <div class="field" id="priorityField" style="display:none;">
-      <label>Priority</label>
-      <div class="priority-group visible">
-        <button class="priority-btn active" data-p="1" onclick="selectPriority(this)">Priority 1</button>
-        <button class="priority-btn" data-p="2" id="p2btn" onclick="selectPriority(this)">Priority 2</button>
-        <button class="priority-btn" data-p="3" id="p3btn" onclick="selectPriority(this)">Priority 3</button>
-        <button class="priority-btn" data-p="4" id="p4btn" onclick="selectPriority(this)">Priority 4</button>
-      </div>
-    </div>
-
-    <!-- Your Name — shown for ALL vendors -->
-    <div class="cp-name-field" id="cpNameField">
-      <label>Your Name <span style="color:var(--accent);font-size:0.65rem;letter-spacing:0.05em;text-transform:none;font-family:'IBM Plex Sans',sans-serif;">(used in filename)</span></label>
-
-      <div class="cp-name-inner" id="cpNameInner">
-        <input type="text" id="cpName" placeholder="Type or select a name"
-               oninput="onCpNameInput()" onfocus="openNameDropdown()"
-               onkeydown="if(event.key==='Enter'){ this.blur(); closeNameDropdown(); }"
-               autocomplete="off" />
-        <span class="name-combo-caret">▾</span>
-
-        <div class="name-combo-dropdown" id="nameComboDropdown">
-          <div class="name-combo-list" id="nameComboList"></div>
-          <div class="name-combo-empty" id="nameComboEmpty">No saved names yet — type one above, then add it.</div>
-          <button type="button" class="name-combo-add" id="nameComboAddBtn" onclick="addNameFromInput()">＋ Add "<span id="nameComboAddText"></span>" as new name</button>
+      <div class="card">
+        <div class="field">
+          <label>Vendor</label>
+          <select id="vendor" onchange="onVendorChange()">
+            <option value="">— Select vendor —</option>
+            <option value="barracuda">Barracuda</option>
+            <option value="zo">ZO</option>
+            <option value="az">AZ</option>
+            <option value="checkpoint">Checkpoint</option>
+            <option value="microsoft">Microsoft</option>
+            <option value="os">OS</option>
+            <option value="is">IS</option>
+            <option value="tw">TW</option>
+            <option value="so">SO</option>
+            <option value="fs">FS</option>
+            <option value="jn">JN</option>
+            <option value="hn">HN</option>
+            <option value="partnerportal">Partner Portal</option>
+          </select>
         </div>
-      </div>
 
-      <p class="hint" id="cpNameHint">Type a name or pick one from the dropdown. Leave blank to use <strong style="color:var(--text);">Diovic</strong> as default.</p>
-    </div>
-
-    <!-- CP P2 stats -->
-    <div class="cp2-section" id="cp2Section">
-      <div class="cp2-block">
-        <div class="cp2-block-title"><span class="rule"></span>File Statistics</div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-value" id="statTotal">0</div>
-            <div class="stat-label">Total URLs</div>
-            <span class="stat-tag">auto</span>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statCategorized">0/0</div>
-            <div class="stat-label">Categorized</div>
-            <span class="stat-tag">auto</span>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value is-manual" id="statDuplicatesDisplay">0 URL</div>
-            <div class="stat-label">Duplicates</div>
-            <span class="stat-tag">manual</span>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="statUploaded">0/0</div>
-            <div class="stat-label">Uploaded GD</div>
-            <span class="stat-tag">auto</span>
+        <div class="field" id="priorityField" style="display:none;">
+          <label>Priority</label>
+          <div class="priority-group visible">
+            <button class="priority-btn active" data-p="1" onclick="selectPriority(this)">Priority 1</button>
+            <button class="priority-btn" data-p="2" id="p2btn" onclick="selectPriority(this)">Priority 2</button>
+            <button class="priority-btn" data-p="3" id="p3btn" onclick="selectPriority(this)">Priority 3</button>
+            <button class="priority-btn" data-p="4" id="p4btn" onclick="selectPriority(this)">Priority 4</button>
           </div>
         </div>
 
-        <hr class="cp2-divider">
-        <div class="cp2-subhead">Manual Fields</div>
+        <div class="cp2-section" id="cp2Section">
+          <div class="cp2-block">
+            <div class="cp2-block-title"><span class="rule"></span>File Statistics</div>
+            <div class="stat-grid">
+              <div class="stat-card">
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Total URLs</div>
+                <span class="stat-tag">auto</span>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statCategorized">0/0</div>
+                <div class="stat-label">Categorized</div>
+                <span class="stat-tag">auto</span>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value is-manual" id="statDuplicatesDisplay">0 URL</div>
+                <div class="stat-label">Duplicates</div>
+                <span class="stat-tag">manual</span>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statUploaded">0/0</div>
+                <div class="stat-label">Uploaded GD</div>
+                <span class="stat-tag">auto</span>
+              </div>
+            </div>
 
-        <div class="manual-grid">
-          <div class="manual-field field" style="margin-bottom:0;">
-            <label>Duplicates <small>Subtracts from uploaded</small></label>
-            <input type="number" id="cp2Duplicates" min="0" value="0" oninput="updatePreview()" />
+            <hr class="cp2-divider">
+            <div class="cp2-subhead">Manual Fields</div>
+
+            <div class="manual-grid">
+              <div class="manual-field field" style="margin-bottom:0;">
+                <label>Duplicates <small>Subtracts from uploaded</small></label>
+                <input type="number" id="cp2Duplicates" min="0" value="0" oninput="updatePreview()" />
+              </div>
+              <div class="manual-field field" style="margin-bottom:0;">
+                <label>Tagged as Immutable</label>
+                <input type="number" id="cp2Immutable" min="0" value="0" oninput="updatePreview()" />
+              </div>
+              <div class="manual-field field" style="margin-bottom:0;">
+                <label>Security Category</label>
+                <input type="text" id="cp2SecurityCat" placeholder="None" oninput="updatePreview()" />
+              </div>
+            </div>
           </div>
-          <div class="manual-field field" style="margin-bottom:0;">
+        </div>
+
+        <hr class="divider">
+
+        <div class="field">
+          <label>Accepted Timestamp</label>
+          <input type="text" id="accepted" placeholder="e.g. 20260226T070001" oninput="updatePreview()" />
+          <p class="hint">Format: YYYYMMDDTHHMMSS</p>
+        </div>
+
+        <div class="field">
+          <div class="url-header">
+            <label>URLs</label>
+            <span class="url-badge" id="url-badge">0 URLs</span>
+          </div>
+
+          <div class="mode-toggle">
+            <button class="mode-btn active" id="btn-single" onclick="setMode('single')">➕ One by One</button>
+            <button class="mode-btn" id="btn-bulk" onclick="setMode('bulk')">📋 Paste Bulk</button>
+          </div>
+
+          <div id="single-mode">
+            <div class="url-col-headers">
+              <span class="url-col-label url-lbl">URL</span>
+              <span class="url-col-label cat-lbl">Primary</span>
+              <span class="url-col-label sec-lbl">Secondary</span>
+              <span class="url-col-label sec-lbl">Security</span>
+              <span style="width:30px;flex-shrink:0;"></span>
+            </div>
+            <div class="url-rows" id="url-rows"></div>
+            <button class="url-add" onclick="addRow()">＋ Add another URL</button>
+          </div>
+
+          <div id="bulk-mode" style="display:none;">
+            <textarea id="bulk-ta"
+              placeholder="Paste URLs here — one per line:&#10;&#10;google.com&#10;facebook.com&#10;example.org&#10;malicious-site.net&#10;..."
+              oninput="updatePreview()"></textarea>
+            <p class="hint" style="margin-top:0.4rem;">One URL per line • Empty lines are ignored • Category/Secondary/Security codes not available in bulk mode</p>
+          </div>
+        </div>
+
+        <div class="validation-banner" id="validation-banner"></div>
+
+        <div class="preview-box">
+          <div class="lbl">Filename Preview</div>
+          <div class="preview-fn" id="preview-fn">—</div>
+          <div class="preview-sub" id="preview-sub"></div>
+        </div>
+
+        <button class="btn-generate" id="genBtn" onclick="generate()" disabled>Generate &amp; Download</button>
+      </div>
+
+      <div class="ns-section" id="ns-section">
+        <div class="ns-header">
+          <div class="ns-title">📋 NS Manager Report <span class="ns-badge" id="ns-badge-text">—</span></div>
+        </div>
+        <div class="ns-body">
+          <div class="ns-field">
+            <label>Security URL</label>
+            <input type="text" id="nsSecurityUrl" placeholder="e.g. technologi.site" oninput="updatePreview()" />
+          </div>
+          <hr class="ns-divider">
+          <div class="ns-field">
+            <label>Primary Status</label>
+            <div class="ns-status-group" id="nsPrimaryStatusGroup">
+              <button class="ns-status-btn active" data-status="add" onclick="selectNSStatus('primary','add',this)">Add</button>
+              <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('primary','retained',this)">Retained</button>
+              <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('primary','changed',this)">Changed</button>
+              <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('primary','removed',this)">Removed</button>
+            </div>
+            <div class="ns-change-fields" id="nsPrimaryFields">
+              <div class="ns-field" id="nsPrimaryCatField">
+                <label id="nsPrimaryCatLabel">Category name</label>
+                <input type="text" id="nsPrimaryCat" placeholder="e.g. Computing & Internet" oninput="updatePreview()" />
+              </div>
+              <div class="ns-field" id="nsPrimaryNewField" style="display:none;">
+                <label>New category name</label>
+                <input type="text" id="nsPrimaryNewCat" placeholder="e.g. Miscellaneous" oninput="updatePreview()" />
+              </div>
+            </div>
+          </div>
+          <hr class="ns-divider">
+          <div class="ns-field">
+            <label>Secondary Status</label>
+            <div class="ns-status-group" id="nsSecondaryStatusGroup">
+              <button class="ns-status-btn active" data-status="none" onclick="selectNSStatus('secondary','none',this)">No Secondary</button>
+              <button class="ns-status-btn" data-status="add" onclick="selectNSStatus('secondary','add',this)">Add</button>
+              <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('secondary','retained',this)">Retained</button>
+              <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('secondary','changed',this)">Changed</button>
+              <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('secondary','removed',this)">Removed</button>
+            </div>
+            <div class="ns-change-fields" id="nsSecondaryFields">
+              <div class="ns-field" id="nsSecondaryCatField">
+                <label id="nsSecondaryCatLabel">Category name</label>
+                <input type="text" id="nsSecondaryCat" placeholder="e.g. Phishing Sites" oninput="updatePreview()" />
+              </div>
+              <div class="ns-field" id="nsSecondaryNewField" style="display:none;">
+                <label>New category name</label>
+                <input type="text" id="nsSecondaryNewCat" placeholder="e.g. Malware Sites" oninput="updatePreview()" />
+              </div>
+            </div>
+          </div>
+          <hr class="ns-divider">
+          <div class="ns-field">
+            <label>Security Status</label>
+            <div class="ns-status-group" id="nsSecurityStatusGroup">
+              <button class="ns-status-btn active" data-status="add" onclick="selectNSStatus('security','add',this)">Add</button>
+              <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('security','retained',this)">Retained</button>
+              <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('security','changed',this)">Changed</button>
+              <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('security','removed',this)">Removed</button>
+            </div>
+            <div class="ns-change-fields" id="nsSecurityFields">
+              <div class="ns-field" id="nsSecurityCatField">
+                <label id="nsSecurityCatLabel">Category name</label>
+                <input type="text" id="nsSecurityCat" placeholder="e.g. Phishing Sites" oninput="updatePreview()" />
+              </div>
+              <div class="ns-field" id="nsSecurityNewField" style="display:none;">
+                <label>New category name</label>
+                <input type="text" id="nsSecurityNewCat" placeholder="e.g. Malware Sites" oninput="updatePreview()" />
+              </div>
+            </div>
+          </div>
+          <hr class="ns-divider">
+          <div class="ns-field">
+            <label>Tags Status</label>
+            <div class="ns-status-group" id="nsTagsStatusGroup">
+              <button class="ns-status-btn active" data-status="add" onclick="selectNSStatus('tags','add',this)">Add</button>
+              <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('tags','retained',this)">Retained</button>
+              <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('tags','changed',this)">Changed</button>
+              <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('tags','removed',this)">Removed</button>
+            </div>
+            <div class="ns-change-fields" id="nsTagsFields">
+              <div class="ns-field" id="nsTagsCatField">
+                <label id="nsTagsCatLabel">Tag</label>
+                <input type="text" id="nsTagsCat" placeholder="e.g. Disputed" oninput="updatePreview()" />
+              </div>
+              <div class="ns-field" id="nsTagsNewField" style="display:none;">
+                <label>New tag</label>
+                <input type="text" id="nsTagsNewCat" placeholder="e.g. Resolved" oninput="updatePreview()" />
+              </div>
+            </div>
+          </div>
+          <div class="ns-report-box">
+            <div class="ns-report-header">
+              <div class="lbl">Report Preview</div>
+              <button class="ns-copy-btn" id="ns-copy-btn" onclick="copyNSReport()">
+                <span id="ns-copy-icon">⎘</span><span id="ns-copy-label">Copy</span>
+              </button>
+            </div>
+            <div class="ns-report-message" id="ns-report-message">—</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="col-right" id="colRight">
+
+      <div class="wiki-section variant-cp" id="wiki-section-cp">
+        <div class="wiki-header">
+          <div class="wiki-title">📋 Wiki Message <span class="wiki-badge">Checkpoint P1 only</span></div>
+          <button class="copy-btn" id="copy-btn-cp" onclick="copyWiki('cp')">
+            <span id="copy-icon-cp">⎘</span><span id="copy-label-cp">Copy</span>
+          </button>
+        </div>
+        <div class="wiki-controls">
+          <div class="wiki-control-field field" style="margin-bottom:0;">
             <label>Tagged as Immutable</label>
-            <input type="number" id="cp2Immutable" min="0" value="0" oninput="updatePreview()" />
+            <input type="number" id="cpImmutable" min="0" placeholder="0" oninput="updatePreview()" />
           </div>
-          <div class="manual-field field" style="margin-bottom:0;">
+          <div class="wiki-control-field field" style="margin-bottom:0;">
             <label>Security Category</label>
-            <input type="text" id="cp2SecurityCat" placeholder="None" oninput="updatePreview()" />
+            <input type="text" id="cpSecurityCat" placeholder="None" oninput="updatePreview()" />
           </div>
         </div>
-      </div>
-    </div>
-
-    <hr class="divider">
-
-    <!-- Accepted -->
-    <div class="field">
-      <label>Accepted Timestamp</label>
-      <input type="text" id="accepted" placeholder="e.g. 20260226T070001" oninput="updatePreview()" />
-      <p class="hint">Format: YYYYMMDDTHHMMSS</p>
-    </div>
-
-    <!-- URLs -->
-    <div class="field">
-      <div class="url-header">
-        <label>URLs</label>
-        <span class="url-badge" id="url-badge">0 URLs</span>
-      </div>
-
-      <div class="mode-toggle">
-        <button class="mode-btn active" id="btn-single" onclick="setMode('single')">➕ One by One</button>
-        <button class="mode-btn" id="btn-bulk" onclick="setMode('bulk')">📋 Paste Bulk</button>
-      </div>
-
-      <div id="single-mode">
-        <div class="url-col-headers">
-          <span class="url-col-label url-lbl">URL</span>
-          <span class="url-col-label cat-lbl">Primary <span style="color:rgba(0,212,255,0.5);font-size:0.6rem;">(col B)</span></span>
-          <span class="url-col-label sec-lbl">Secondary <span style="color:rgba(0,212,255,0.5);font-size:0.6rem;">(col C)</span></span>
-          <span class="url-col-label sec-lbl">Security <span style="color:rgba(251,146,60,0.55);font-size:0.6rem;">(col D)</span></span>
-          <span style="width:28px;flex-shrink:0;"></span>
-        </div>
-        <div class="url-rows" id="url-rows"></div>
-        <button class="url-add" onclick="addRow()">＋ Add another URL</button>
-      </div>
-
-      <div id="bulk-mode" style="display:none;">
-        <textarea id="bulk-ta"
-          placeholder="Paste URLs here — one per line:&#10;&#10;google.com&#10;facebook.com&#10;example.org&#10;malicious-site.net&#10;..."
-          oninput="updatePreview()"></textarea>
-        <p class="hint" style="margin-top:0.4rem;">One URL per line • Empty lines are ignored • Category/Secondary/Security codes not available in bulk mode</p>
-      </div>
-    </div>
-
-    <div class="validation-banner" id="validation-banner"></div>
-
-    <div class="preview-box">
-      <div class="lbl">Filename Preview</div>
-      <div class="preview-fn" id="preview-fn">—</div>
-      <div class="preview-sub" id="preview-sub"></div>
-    </div>
-
-    <button class="btn-generate" id="genBtn" onclick="generate()" disabled>Generate &amp; Download</button>
-
-    <!-- Wiki: Checkpoint P1 -->
-    <div class="wiki-section variant-cp" id="wiki-section-cp">
-      <div class="wiki-header">
-        <div class="wiki-title">
-          📋 Wiki Message
-          <span class="wiki-badge">Checkpoint P1 only</span>
-        </div>
-        <button class="copy-btn" id="copy-btn-cp" onclick="copyWiki('cp')">
-          <span id="copy-icon-cp">⎘</span>
-          <span id="copy-label-cp">Copy</span>
-        </button>
-      </div>
-      <div class="wiki-controls">
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Tagged as Immutable</label>
-          <input type="number" id="cpImmutable" min="0" placeholder="0" oninput="updatePreview()" />
-        </div>
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Security Category</label>
-          <input type="text" id="cpSecurityCat" placeholder="None" oninput="updatePreview()" />
+        <div class="wiki-body">
+          <div class="wiki-message" id="wiki-message-cp">—</div>
         </div>
       </div>
-      <div class="wiki-body">
-        <div class="wiki-message" id="wiki-message-cp">—</div>
-      </div>
-    </div>
 
-    <!-- Wiki: TW -->
-    <div class="wiki-section variant-tw" id="wiki-section-tw">
-      <div class="wiki-header">
-        <div class="wiki-title">
-          📋 Wiki Message
-          <span class="wiki-badge">TW only</span>
+      <div class="wiki-section variant-tw" id="wiki-section-tw">
+        <div class="wiki-header">
+          <div class="wiki-title">📋 Wiki Message <span class="wiki-badge">TW only</span></div>
+          <button class="copy-btn" id="copy-btn-tw" onclick="copyWiki('tw')">
+            <span id="copy-icon-tw">⎘</span><span id="copy-label-tw">Copy</span>
+          </button>
         </div>
-        <button class="copy-btn" id="copy-btn-tw" onclick="copyWiki('tw')">
-          <span id="copy-icon-tw">⎘</span>
-          <span id="copy-label-tw">Copy</span>
-        </button>
-      </div>
-      <div class="wiki-controls">
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Tagged as Immutable</label>
-          <input type="number" id="twImmutable" min="0" placeholder="0" oninput="updatePreview()" />
-        </div>
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Security Category</label>
-          <input type="text" id="twSecurityCat" placeholder="None" oninput="updatePreview()" />
-        </div>
-      </div>
-      <div class="wiki-body">
-        <div class="wiki-message" id="wiki-message-tw">—</div>
-      </div>
-    </div>
-
-    <!-- Wiki: Generic (Barracuda / Microsoft / OS / IS / SO / FS / JN / HN) -->
-    <div class="wiki-section variant-gen" id="wiki-section-gen">
-      <div class="wiki-header">
-        <div class="wiki-title">
-          📋 Wiki Message
-          <span class="wiki-badge" id="wiki-gen-badge">—</span>
-        </div>
-        <button class="copy-btn" id="copy-btn-gen" onclick="copyWiki('gen')">
-          <span id="copy-icon-gen">⎘</span>
-          <span id="copy-label-gen">Copy</span>
-        </button>
-      </div>
-      <div class="wiki-controls">
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Tagged as Immutable</label>
-          <input type="number" id="genImmutable" min="0" placeholder="0" oninput="updatePreview()" />
-        </div>
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Security Category</label>
-          <input type="text" id="genSecurityCat" placeholder="None" oninput="updatePreview()" />
-        </div>
-      </div>
-      <div class="wiki-body">
-        <div class="wiki-message" id="wiki-message-gen">—</div>
-      </div>
-    </div>
-
-    <!-- Wiki: ZO -->
-    <div class="wiki-section variant-zo" id="wiki-section-zo">
-      <div class="wiki-header">
-        <div class="wiki-title">
-          📋 Wiki Message
-          <span class="wiki-badge" id="wiki-zo-badge">—</span>
-        </div>
-        <button class="copy-btn" id="copy-btn-zo" onclick="copyWiki('zo')">
-          <span id="copy-icon-zo">⎘</span>
-          <span id="copy-label-zo">Copy</span>
-        </button>
-      </div>
-      <div class="wiki-controls">
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Tagged as Immutable</label>
-          <input type="number" id="zoImmutable" min="0" placeholder="0" oninput="updatePreview()" />
-        </div>
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Security Category</label>
-          <input type="text" id="zoSecurityCat" placeholder="None" oninput="updatePreview()" />
-        </div>
-      </div>
-      <div class="wiki-body">
-        <div class="wiki-message" id="wiki-message-zo">—</div>
-      </div>
-    </div>
-
-    <!-- Wiki: AZ -->
-    <div class="wiki-section variant-az" id="wiki-section-az">
-      <div class="wiki-header">
-        <div class="wiki-title">
-          📋 Wiki Message
-          <span class="wiki-badge" id="wiki-az-badge">—</span>
-        </div>
-        <button class="copy-btn" id="copy-btn-az" onclick="copyWiki('az')">
-          <span id="copy-icon-az">⎘</span>
-          <span id="copy-label-az">Copy</span>
-        </button>
-      </div>
-      <div class="wiki-controls">
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Tagged as Immutable</label>
-          <input type="number" id="azImmutable" min="0" placeholder="0" oninput="updatePreview()" />
-        </div>
-        <div class="wiki-control-field field" style="margin-bottom:0;">
-          <label>Security Category</label>
-          <input type="text" id="azSecurityCat" placeholder="None" oninput="updatePreview()" />
-        </div>
-      </div>
-      <div class="wiki-body">
-        <div class="wiki-message" id="wiki-message-az">—</div>
-      </div>
-    </div>
-
-    <!-- NS Manager Report -->
-    <div class="ns-section" id="ns-section">
-      <div class="ns-header">
-        <div class="ns-title">
-          📋 NS Manager Report
-          <span class="ns-badge" id="ns-badge-text">—</span>
-        </div>
-      </div>
-      <div class="ns-body">
-
-        <div class="ns-field">
-          <label>Security URL</label>
-          <input type="text" id="nsSecurityUrl" placeholder="e.g. technologi.site" oninput="updatePreview()" />
-        </div>
-
-        <hr class="ns-divider">
-
-        <div class="ns-field">
-          <label>Primary Status</label>
-          <div class="ns-status-group" id="nsPrimaryStatusGroup">
-            <button class="ns-status-btn active" data-status="add" onclick="selectNSStatus('primary','add',this)">Add</button>
-            <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('primary','retained',this)">Retained</button>
-            <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('primary','changed',this)">Changed</button>
-            <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('primary','removed',this)">Removed</button>
+        <div class="wiki-controls">
+          <div class="wiki-control-field field" style="margin-bottom:0;">
+            <label>Tagged as Immutable</label>
+            <input type="number" id="twImmutable" min="0" placeholder="0" oninput="updatePreview()" />
           </div>
-          <div class="ns-change-fields" id="nsPrimaryFields">
-            <div class="ns-field" id="nsPrimaryCatField">
-              <label id="nsPrimaryCatLabel">Category name</label>
-              <input type="text" id="nsPrimaryCat" placeholder="e.g. Computing & Internet" oninput="updatePreview()" />
-            </div>
-            <div class="ns-field" id="nsPrimaryNewField" style="display:none;">
-              <label>New category name</label>
-              <input type="text" id="nsPrimaryNewCat" placeholder="e.g. Miscellaneous" oninput="updatePreview()" />
-            </div>
+          <div class="wiki-control-field field" style="margin-bottom:0;">
+            <label>Security Category</label>
+            <input type="text" id="twSecurityCat" placeholder="None" oninput="updatePreview()" />
           </div>
         </div>
-
-        <hr class="ns-divider">
-
-        <div class="ns-field">
-          <label>Secondary Status</label>
-          <div class="ns-status-group" id="nsSecondaryStatusGroup">
-            <button class="ns-status-btn active" data-status="none" onclick="selectNSStatus('secondary','none',this)">No Secondary</button>
-            <button class="ns-status-btn" data-status="add" onclick="selectNSStatus('secondary','add',this)">Add</button>
-            <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('secondary','retained',this)">Retained</button>
-            <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('secondary','changed',this)">Changed</button>
-            <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('secondary','removed',this)">Removed</button>
-          </div>
-          <div class="ns-change-fields" id="nsSecondaryFields">
-            <div class="ns-field" id="nsSecondaryCatField">
-              <label id="nsSecondaryCatLabel">Category name</label>
-              <input type="text" id="nsSecondaryCat" placeholder="e.g. Phishing Sites" oninput="updatePreview()" />
-            </div>
-            <div class="ns-field" id="nsSecondaryNewField" style="display:none;">
-              <label>New category name</label>
-              <input type="text" id="nsSecondaryNewCat" placeholder="e.g. Malware Sites" oninput="updatePreview()" />
-            </div>
-          </div>
+        <div class="wiki-body">
+          <div class="wiki-message" id="wiki-message-tw">—</div>
         </div>
-
-        <hr class="ns-divider">
-
-        <div class="ns-field">
-          <label>Security Status</label>
-          <div class="ns-status-group" id="nsSecurityStatusGroup">
-            <button class="ns-status-btn active" data-status="add" onclick="selectNSStatus('security','add',this)">Add</button>
-            <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('security','retained',this)">Retained</button>
-            <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('security','changed',this)">Changed</button>
-            <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('security','removed',this)">Removed</button>
-          </div>
-          <div class="ns-change-fields" id="nsSecurityFields">
-            <div class="ns-field" id="nsSecurityCatField">
-              <label id="nsSecurityCatLabel">Category name</label>
-              <input type="text" id="nsSecurityCat" placeholder="e.g. Phishing Sites" oninput="updatePreview()" />
-            </div>
-            <div class="ns-field" id="nsSecurityNewField" style="display:none;">
-              <label>New category name</label>
-              <input type="text" id="nsSecurityNewCat" placeholder="e.g. Malware Sites" oninput="updatePreview()" />
-            </div>
-          </div>
-        </div>
-
-        <hr class="ns-divider">
-
-        <div class="ns-field">
-          <label>Tags Status</label>
-          <div class="ns-status-group" id="nsTagsStatusGroup">
-            <button class="ns-status-btn active" data-status="add" onclick="selectNSStatus('tags','add',this)">Add</button>
-            <button class="ns-status-btn" data-status="retained" onclick="selectNSStatus('tags','retained',this)">Retained</button>
-            <button class="ns-status-btn" data-status="changed" onclick="selectNSStatus('tags','changed',this)">Changed</button>
-            <button class="ns-status-btn" data-status="removed" onclick="selectNSStatus('tags','removed',this)">Removed</button>
-          </div>
-          <div class="ns-change-fields" id="nsTagsFields">
-            <div class="ns-field" id="nsTagsCatField">
-              <label id="nsTagsCatLabel">Tag</label>
-              <input type="text" id="nsTagsCat" placeholder="e.g. Disputed" oninput="updatePreview()" />
-            </div>
-            <div class="ns-field" id="nsTagsNewField" style="display:none;">
-              <label>New tag</label>
-              <input type="text" id="nsTagsNewCat" placeholder="e.g. Resolved" oninput="updatePreview()" />
-            </div>
-          </div>
-        </div>
-
-        <div class="ns-report-box">
-          <div class="ns-report-header">
-            <div class="lbl">Report Preview</div>
-            <button class="ns-copy-btn" id="ns-copy-btn" onclick="copyNSReport()">
-              <span id="ns-copy-icon">⎘</span>
-              <span id="ns-copy-label">Copy</span>
-            </button>
-          </div>
-          <div class="ns-report-message" id="ns-report-message">—</div>
-        </div>
-
       </div>
+
+      <div class="wiki-section variant-gen" id="wiki-section-gen">
+        <div class="wiki-header">
+          <div class="wiki-title">📋 Wiki Message <span class="wiki-badge" id="wiki-gen-badge">—</span></div>
+          <button class="copy-btn" id="copy-btn-gen" onclick="copyWiki('gen')">
+            <span id="copy-icon-gen">⎘</span><span id="copy-label-gen">Copy</span>
+          </button>
+        </div>
+        <div class="wiki-controls">
+          <div class="wiki-control-field field" style="margin-bottom:0;">
+            <label>Tagged as Immutable</label>
+            <input type="number" id="genImmutable" min="0" placeholder="0" oninput="updatePreview()" />
+          </div>
+          <div class="wiki-control-field field" style="margin-bottom:0;">
+            <label>Security Category</label>
+            <input type="text" id="genSecurityCat" placeholder="None" oninput="updatePreview()" />
+          </div>
+        </div>
+        <div class="wiki-body">
+          <div class="wiki-message" id="wiki-message-gen">—</div>
+        </div>
+      </div>
+
+      <div class="wiki-section variant-zo" id="wiki-section-zo">
+        <div class="wiki-header">
+          <div class="wiki-title">📋 Wiki Message <span class="wiki-badge" id="wiki-zo-badge">—</span></div>
+          <button class="copy-btn" id="copy-btn-zo" onclick="copyWiki('zo')">
+            <span id="copy-icon-zo">⎘</span><span id="copy-label-zo">Copy</span>
+          </button>
+        </div>
+        <div class="wiki-controls">
+          <div class="wiki-control-field field" style="margin-bottom:0;">
+            <label>Tagged as Immutable</label>
+            <input type="number" id="zoImmutable" min="0" placeholder="0" oninput="updatePreview()" />
+          </div>
+          <div class="wiki-control-field field" style="margin-bottom:0;">
+            <label>Security Category</label>
+            <input type="text" id="zoSecurityCat" placeholder="None" oninput="updatePreview()" />
+          </div>
+        </div>
+        <div class="wiki-body">
+          <div class="wiki-message" id="wiki-message-zo">—</div>
+        </div>
+      </div>
+
+      <div class="wiki-section variant-az" id="wiki-section-az">
+        <div class="wiki-header">
+          <div class="wiki-title">📋 Wiki Message <span class="wiki-badge" id="wiki-az-badge">—</span></div>
+          <button class="copy-btn" id="copy-btn-az" onclick="copyWiki('az')">
+            <span id="copy-icon-az">⎘</span><span id="copy-label-az">Copy</span>
+          </button>
+        </div>
+        <div class="wiki-controls">
+          <div class="wiki-control-field field" style="margin-bottom:0;">
+            <label>Tagged as Immutable</label>
+            <input type="number" id="azImmutable" min="0" placeholder="0" oninput="updatePreview()" />
+          </div>
+          <div class="wiki-control-field field" style="margin-bottom:0;">
+            <label>Security Category</label>
+            <input type="text" id="azSecurityCat" placeholder="None" oninput="updatePreview()" />
+          </div>
+        </div>
+        <div class="wiki-body">
+          <div class="wiki-message" id="wiki-message-az">—</div>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -1142,7 +1548,7 @@
 
 <script>
 /* ════════════════════════════════════════════
-   FIREBASE SETUP
+   FIREBASE
    ════════════════════════════════════════════ */
 const firebaseConfig = {
   apiKey: "AIzaSyCv9HPl5I4l1WfByGYT4fKiI6D4GBAqY-0",
@@ -1153,275 +1559,457 @@ const firebaseConfig = {
   appId: "1:512536798701:web:478fcd481cadc151cb33e4",
   measurementId: "G-47QYHE3TVE"
 };
-
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.firestore();
-const USERS_COLLECTION = 'disputeUsers';
 
-/* ── Generic confirm dialog ── */
+const MONITORING_CONFIG = {
+  apiKey: "AIzaSyCsoYyepyJGIqbdW-QfWUZjJozmxrx2oWk",
+  authDomain: "handlingdisputes.firebaseapp.com",
+  projectId: "handlingdisputes",
+  storageBucket: "handlingdisputes.firebasestorage.app",
+  messagingSenderId: "891854791293",
+  appId: "1:891854791293:web:70bf2ee2c964a144228714",
+  databaseURL: "https://handlingdisputes-default-rtdb.firebaseio.com"
+};
+const monitoringApp = firebase.initializeApp(MONITORING_CONFIG, 'monitoring');
+const monitoringRtdb = monitoringApp.database();
+
+const monTicketsRef   = monitoringRtdb.ref('tickets');
+const monSeqRef       = monitoringRtdb.ref('meta/seqNum');
+const monRotationRef  = monitoringRtdb.ref('meta/rotation');   // 🆕
+const monProfilesRef  = monitoringRtdb.ref('profiles');
+const monPhotosRef    = monitoringRtdb.ref('profiles/photos');
+
+let CURRENT_USER = null;
+let MONITORING_ROTATION = { rotationIndex: 0, workingToday: [] };   // 🆕 live snapshot
+
+/* ════════════════════════════════════════════
+   AUTH UI
+   ════════════════════════════════════════════ */
+function setAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('tabLogin').classList.toggle('active', isLogin);
+  document.getElementById('tabRegister').classList.toggle('active', !isLogin);
+  document.getElementById('loginForm').classList.toggle('hidden', !isLogin);
+  document.getElementById('registerForm').classList.toggle('hidden', isLogin);
+  document.getElementById('authShell').classList.toggle('register-mode', !isLogin);
+  document.getElementById('authBrandSub').textContent = isLogin
+    ? 'Sign in to your team account' : 'Create your team account';
+  hideAuthMsg();
+  const body = document.querySelector('.auth-body');
+  if (body) body.scrollTop = 0;
+  if (!isLogin) loadAgentPicker();
+}
+function showAuthMsg(text, type) {
+  const el = document.getElementById('authMsg');
+  el.textContent = text;
+  el.className = 'auth-msg visible ' + (type || 'error');
+}
+function hideAuthMsg() {
+  const el = document.getElementById('authMsg');
+  el.className = 'auth-msg';
+  el.textContent = '';
+}
+function setAuthBusy(busy, which) {
+  const loginBtn = document.getElementById('loginBtn');
+  const regBtn   = document.getElementById('registerBtn');
+  if (which === 'login') { loginBtn.disabled = busy; loginBtn.textContent = busy ? 'Signing in…' : 'Sign In'; }
+  else if (which === 'register') { regBtn.disabled = busy; regBtn.textContent = busy ? 'Creating account…' : 'Create Account'; }
+  else { loginBtn.disabled = busy; regBtn.disabled = busy; }
+}
+
+/* ════════════════════════════════════════════
+   AGENT PICKER
+   ════════════════════════════════════════════ */
+let AGENTS_LIST = [];
+let SELECTED_AGENT = null;
+let agentsLoaded = false;
+
+function encodeNameKey(name) { return name.replace(/[.#$\[\]]/g, '_'); }
+function initials(name) { return name.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase(); }
+
+async function loadAgentPicker(force) {
+  const content = document.getElementById('agentPickerContent');
+  if (!force && agentsLoaded) { renderAgentPicker(); return; }
+  content.className = 'agent-picker-loading';
+  content.innerHTML = `<div class="spinner"></div><span>Loading agents…</span>`;
+  try {
+    const [profilesSnap, photosSnap] = await Promise.all([
+      monProfilesRef.once('value'), monPhotosRef.once('value')
+    ]);
+    const profiles = profilesSnap.val() || {};
+    const photos   = photosSnap.val()   || {};
+    const photoByName = {};
+    Object.keys(photos).forEach(k => { if (photos[k]) photoByName[k] = photos[k]; });
+    const names = new Set();
+    Object.keys(profiles).forEach(k => {
+      const p = profiles[k];
+      if (p && p.name) names.add(p.name);
+    });
+    AGENTS_LIST = [...names].map(n => ({
+      name: n,
+      role: (profiles[encodeNameKey(n)] && profiles[encodeNameKey(n)].role) || '',
+      photo: photoByName[encodeNameKey(n)] || null
+    })).sort((a, b) => a.name.localeCompare(b.name));
+    agentsLoaded = true;
+    if (!AGENTS_LIST.length) {
+      content.className = 'agent-picker-empty';
+      content.innerHTML = `No agent profiles found.<br>Ask an admin to add agents in Monitoring first.`;
+      return;
+    }
+    renderAgentPicker();
+  } catch (err) {
+    console.error('Failed to load agents:', err);
+    content.className = 'agent-picker-empty';
+    content.innerHTML = `Could not load agents.<br><span style="color:var(--danger)">${escapeHtml(err.message || String(err))}</span>`;
+  }
+}
+function renderAgentPicker() {
+  const content = document.getElementById('agentPickerContent');
+  if (!AGENTS_LIST.length) return;
+  content.className = 'agent-picker-grid';
+  content.innerHTML = AGENTS_LIST.map(a => {
+    const sel = a.name === SELECTED_AGENT ? 'selected' : '';
+    const ava = a.photo
+      ? `<span class="ava"><img src="${a.photo}" alt=""/></span>`
+      : `<span class="ava">${escapeHtml(initials(a.name) || '?')}</span>`;
+    return `<div class="agent-pick-item ${sel}" data-name="${escapeHtml(a.name)}" onclick="pickAgent('${a.name.replace(/'/g, "\\'")}')">
+      <span class="tick">✓</span>${ava}
+      <div class="info">
+        <div class="nm">${escapeHtml(a.name)}</div>
+        <div class="rl">${a.role ? escapeHtml(a.role) : '—'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function pickAgent(name) {
+  SELECTED_AGENT = name;
+  renderAgentPicker();
+  document.getElementById('agentPickerHint').innerHTML =
+    `Selected: <strong>${escapeHtml(name)}</strong> — this name will appear in filenames and pushed tickets.`;
+}
+
+/* ════════════════════════════════════════════
+   AUTH ACTIONS
+   ════════════════════════════════════════════ */
+async function doLogin() {
+  hideAuthMsg();
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPassword').value;
+  if (!email || !pass) return showAuthMsg('Please enter your email and password.');
+  setAuthBusy(true, 'login');
+  try { await auth.signInWithEmailAndPassword(email, pass); }
+  catch (err) { console.error(err); showAuthMsg(friendlyAuthError(err)); setAuthBusy(false, 'login'); }
+}
+async function doRegister() {
+  hideAuthMsg();
+  const name  = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass  = document.getElementById('regPassword').value;
+  const pass2 = document.getElementById('regPassword2').value;
+  if (!name)           return showAuthMsg('Please enter your full name.');
+  if (!email)          return showAuthMsg('Please enter your email.');
+  if (pass.length < 6) return showAuthMsg('Password must be at least 6 characters.');
+  if (pass !== pass2)  return showAuthMsg('Passwords do not match.');
+  if (!SELECTED_AGENT) return showAuthMsg('Please select your agent profile below.');
+  setAuthBusy(true, 'register');
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    await cred.user.updateProfile({ displayName: name });
+    await db.collection('disputeUsers').doc(cred.user.uid).set({
+      name, email, agentName: SELECTED_AGENT,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.error(err); showAuthMsg(friendlyAuthError(err)); setAuthBusy(false, 'register');
+  }
+}
+async function doLogout() {
+  try { await auth.signOut(); } catch (err) { console.error('Logout failed:', err); }
+}
+function friendlyAuthError(err) {
+  const code = err && err.code ? err.code : '';
+  switch (code) {
+    case 'auth/invalid-email':          return 'Invalid email address.';
+    case 'auth/user-not-found':         return 'No account found with that email. Please register first.';
+    case 'auth/wrong-password':         return 'Incorrect password.';
+    case 'auth/invalid-credential':     return 'Incorrect email or password.';
+    case 'auth/email-already-in-use':   return 'That email is already registered. Try logging in.';
+    case 'auth/weak-password':          return 'Password is too weak (min 6 characters).';
+    case 'auth/too-many-requests':      return 'Too many attempts. Please wait a moment and try again.';
+    case 'auth/network-request-failed': return 'Network error. Check your connection.';
+    default:                            return (err && err.message) ? err.message : 'Something went wrong.';
+  }
+}
+
+/* ════════════════════════════════════════════
+   AUTH STATE
+   ════════════════════════════════════════════ */
+function showScreen(which) {
+  document.getElementById('authScreen').classList.toggle('hidden', which !== 'auth');
+  document.getElementById('loadingScreen').classList.toggle('hidden', which !== 'loading');
+  document.getElementById('mainApp').classList.toggle('hidden', which !== 'app');
+}
+
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    let name = (user.displayName || '').trim();
+    let agentName = '';
+    let agentPhoto = null;
+    try {
+      const doc = await db.collection('disputeUsers').doc(user.uid).get();
+      if (doc.exists) {
+        const d = doc.data();
+        if (!name && d.name) name = d.name;
+        if (d.agentName) agentName = d.agentName;
+      }
+    } catch (e) {}
+    if (!name) name = (user.email || '').split('@')[0] || 'User';
+    if (!agentName) agentName = name;
+    try {
+      const photoSnap = await monPhotosRef.child(encodeNameKey(agentName)).once('value');
+      if (photoSnap.exists()) agentPhoto = photoSnap.val();
+    } catch (e) {}
+    CURRENT_USER = { uid: user.uid, email: user.email, name, agentName, agentPhoto };
+    document.getElementById('userName').textContent = agentName;
+    const avEl = document.getElementById('userAvatar');
+    if (agentPhoto) { avEl.innerHTML = `<img src="${agentPhoto}" alt=""/>`; avEl.style.background = 'transparent'; }
+    else { avEl.textContent = initials(agentName); avEl.style.background = ''; }
+    showScreen('app');
+    if (!window._appInited) { window._appInited = true; initApp(); }
+    // 🆕 Start listening to Monitoring rotation
+    startRotationListener();
+    updatePreview();
+  } else {
+    CURRENT_USER = null;
+    showScreen('auth');
+    const lp = document.getElementById('loginPassword');
+    if (lp) lp.value = '';
+    agentsLoaded = false;
+    SELECTED_AGENT = null;
+    setAuthTab('login');
+    stopRotationListener();
+  }
+});
+
+showScreen('loading');
+
+/* ════════════════════════════════════════════
+   🆕 MONITORING ROTATION LISTENER
+   ════════════════════════════════════════════ */
+let rotationListenerStarted = false;
+
+function startRotationListener() {
+  if (rotationListenerStarted) return;
+  rotationListenerStarted = true;
+
+  monRotationRef.on('value', snap => {
+    const d = snap.val() || {};
+    MONITORING_ROTATION = {
+      rotationIndex: typeof d.rotationIndex === 'number' ? d.rotationIndex : 0,
+      workingToday: Array.isArray(d.workingToday) ? d.workingToday : []
+    };
+    renderRotationBadge();
+  }, err => {
+    console.error('Rotation listener error:', err);
+  });
+}
+function stopRotationListener() {
+  if (!rotationListenerStarted) return;
+  rotationListenerStarted = false;
+  monRotationRef.off();
+  MONITORING_ROTATION = { rotationIndex: 0, workingToday: [] };
+  renderRotationBadge();
+}
+
+/** Returns the current rotation person (or null if list empty) */
+function currentRotationPerson() {
+  const wt = MONITORING_ROTATION.workingToday || [];
+  if (!wt.length) return null;
+  const idx = (MONITORING_ROTATION.rotationIndex || 0) % wt.length;
+  return wt[idx];
+}
+/** Returns the next-up person (or null) */
+function nextRotationPerson() {
+  const wt = MONITORING_ROTATION.workingToday || [];
+  if (!wt.length) return null;
+  const idx = (MONITORING_ROTATION.rotationIndex || 0) % wt.length;
+  return wt[(idx + 1) % wt.length];
+}
+/** Is the current logged-in agent the one on rotation? */
+function isMyTurn() {
+  if (!CURRENT_USER) return false;
+  const cur = currentRotationPerson();
+  if (!cur) return false;
+  return cur.trim().toLowerCase() === CURRENT_USER.agentName.trim().toLowerCase();
+}
+
+/** Update the badge in the header */
+function renderRotationBadge() {
+  const el = document.getElementById('rotStatus');
+  const txt = document.getElementById('rotStatusText');
+  if (!el || !txt) return;
+
+  const wt = MONITORING_ROTATION.workingToday || [];
+  if (!wt.length) {
+    el.className = 'rotation-status';
+    txt.textContent = 'No rotation set';
+    return;
+  }
+
+  const cur = currentRotationPerson();
+  const mine = isMyTurn();
+
+  if (mine) {
+    el.className = 'rotation-status is-me';
+    txt.textContent = `Your turn · ${cur}`;
+  } else {
+    el.className = 'rotation-status not-me';
+    txt.textContent = `On rotation: ${cur}`;
+  }
+}
+
+/* ════════════════════════════════════════════
+   TICKET PUSH (with rotation advance)
+   ════════════════════════════════════════════ */
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/**
+ * 🆕 Push a ticket to Monitoring AND advance the rotation
+ * ONLY if the logged-in agent is currently on rotation.
+ *
+ * Returns: { ticketId, title, type, advanced: boolean, rotation: 'old → new'|null }
+ */
+async function pushTicketToMonitoring(title, type) {
+  if (!title || !CURRENT_USER) return null;
+  try {
+    // ── 1. Sequence number ──
+    const seqSnap = await monSeqRef.once('value');
+    const seq = seqSnap.val() || 0;
+    const nextSeq = seq + 1;
+    const ticketId = 'TKT-' + String(nextSeq).padStart(4, '0');
+
+    // ── 2. Read latest rotation ──
+    const rotSnap = await monRotationRef.once('value');
+    const rotData = rotSnap.val() || {};
+    const wt = Array.isArray(rotData.workingToday) ? rotData.workingToday.slice() : [];
+    let rotIdx = typeof rotData.rotationIndex === 'number' ? rotData.rotationIndex : 0;
+    if (wt.length > 0) rotIdx = ((rotIdx % wt.length) + wt.length) % wt.length;
+
+    // Determine who is on rotation & whether it's the current user
+    const myAgent = CURRENT_USER.agentName.trim().toLowerCase();
+    const rotPerson = wt.length ? wt[rotIdx] : null;
+    const myTurn = rotPerson && rotPerson.trim().toLowerCase() === myAgent;
+    const prevPerson = rotPerson;
+
+    let advanced = false;
+    let nextPerson = null;
+
+    if (myTurn && wt.length > 0) {
+      // Move rotation to the next person
+      rotIdx = (rotIdx + 1) % wt.length;
+      nextPerson = wt[rotIdx];
+      advanced = true;
+    }
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const ts = Date.now();
+
+    // ── 3. Push the ticket ──
+    await monTicketsRef.push({
+      id: ticketId,
+      seqNum: nextSeq,
+      type: type || 'Dispute',
+      title,
+      assignee: CURRENT_USER.agentName,
+      date: dateStr,
+      time: timeStr,
+      dateKey: todayKey(),
+      status: 'Pending',
+      ts,
+      // 🆕 mark whether it consumed the rotation
+      usedRotationTurn: advanced
+    });
+
+    // ── 4. Bump seq + maybe advance rotation ──
+    await monSeqRef.set(nextSeq);
+
+    if (advanced) {
+      // Preserve other fields (activityLog etc.), just update rotationIndex
+      await monRotationRef.update({ rotationIndex: rotIdx });
+      console.log(`🔁 Rotation advanced: ${prevPerson} → ${nextPerson}`);
+    }
+
+    return {
+      ticketId,
+      title,
+      type: type || 'Dispute',
+      advanced,
+      rotationFrom: prevPerson,
+      rotationTo: nextPerson
+    };
+  } catch (err) {
+    console.error('❌ Push failed:', err);
+    return null;
+  }
+}
+
+/* ════════════════════════════════════════════
+   Checkpoint duplicate check
+   ════════════════════════════════════════════ */
+async function checkCheckpointDuplicate(timestamp) {
+  if (!timestamp) return null;
+  try {
+    const snap = await monTicketsRef.once('value');
+    const all = snap.val() || {};
+    for (const key of Object.keys(all)) {
+      const t = all[key];
+      if (!t || !t.title) continue;
+      if ((t.title || '').includes(timestamp) && /Checkpoint/i.test(t.title)) {
+        return { id: t.id || '—', title: t.title, assignee: t.assignee || '—', key };
+      }
+    }
+    return null;
+  } catch (err) { console.error('Duplicate check failed:', err); return null; }
+}
+
+/* ════════════════════════════════════════════
+   GENERIC CONFIRM
+   ════════════════════════════════════════════ */
 let _confirmResolveAction = null;
-
 function showConfirmDialog({ title, message, okLabel, okClass, onConfirm, onCancel }) {
   const overlay   = document.getElementById('confirmOverlay');
   const titleEl   = document.getElementById('confirmTitle');
   const msgEl     = document.getElementById('confirmMessage');
   const okBtn     = document.getElementById('confirmOkBtn');
   const cancelBtn = document.getElementById('confirmCancelBtn');
-
   titleEl.textContent = title || 'Are you sure?';
   msgEl.innerHTML = message || 'This action cannot be undone.';
-
   okBtn.textContent = okLabel || 'Confirm';
   okBtn.className = 'confirm-btn ' + (okClass || 'danger');
-
   _confirmResolveAction = { onConfirm, onCancel };
-
   okBtn.onclick = async () => {
-    okBtn.disabled = true;
-    cancelBtn.disabled = true;
-    try {
-      if (_confirmResolveAction && _confirmResolveAction.onConfirm) {
-        await _confirmResolveAction.onConfirm();
-      }
-    } finally {
-      okBtn.disabled = false;
-      cancelBtn.disabled = false;
-      closeConfirmDialog(true);
-    }
+    okBtn.disabled = true; cancelBtn.disabled = true;
+    try { if (_confirmResolveAction && _confirmResolveAction.onConfirm) await _confirmResolveAction.onConfirm(); }
+    finally { okBtn.disabled = false; cancelBtn.disabled = false; closeConfirmDialog(true); }
   };
-
   overlay.classList.remove('hidden');
 }
-
 function closeConfirmDialog(skipCancelCallback) {
-  const overlay = document.getElementById('confirmOverlay');
-  overlay.classList.add('hidden');
-  if (!skipCancelCallback && _confirmResolveAction && _confirmResolveAction.onCancel) {
-    _confirmResolveAction.onCancel();
-  }
+  document.getElementById('confirmOverlay').classList.add('hidden');
+  if (!skipCancelCallback && _confirmResolveAction && _confirmResolveAction.onCancel) _confirmResolveAction.onCancel();
   _confirmResolveAction = null;
 }
-
-function initials(name) {
-  return name.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
-}
-
 function escapeHtml(str) {
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
-}
-
-async function saveNameToFirestore(name) {
-  const id = name.trim().toLowerCase().replace(/\s+/g, '-');
-  try {
-    await db.collection(USERS_COLLECTION).doc(id).set({
-      name: name.trim(),
-      lastUsed: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-  } catch (err) {
-    console.error('Failed to save name:', err);
-  }
-}
-
-/* ════════════════════════════════════════════
-   NAME COMBOBOX
-   ════════════════════════════════════════════ */
-let savedNames = [];
-let nameComboOpen = false;
-
-async function loadNamesCache() {
-  try {
-    const snap = await db.collection(USERS_COLLECTION).orderBy('name').get();
-    savedNames = snap.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
-  } catch (err) {
-    console.error('Failed to load saved names:', err);
-    savedNames = [];
-  }
-  renderNameComboList();
-}
-
-function getFilteredNames() {
-  const q = document.getElementById('cpName').value.trim().toLowerCase();
-  if (!q) return savedNames;
-  return savedNames.filter(n => n.name.toLowerCase().includes(q));
-}
-
-function renderNameComboList() {
-  const listEl    = document.getElementById('nameComboList');
-  const emptyEl   = document.getElementById('nameComboEmpty');
-  const addBtn    = document.getElementById('nameComboAddBtn');
-  const addTextEl = document.getElementById('nameComboAddText');
-  const typed     = document.getElementById('cpName').value.trim();
-
-  const filtered = getFilteredNames();
-  listEl.innerHTML = '';
-  filtered.forEach(n => listEl.appendChild(buildComboPill(n.id, n.name)));
-
-  emptyEl.classList.toggle('visible', filtered.length === 0);
-
-  const exactMatch = savedNames.some(n => n.name.toLowerCase() === typed.toLowerCase());
-  if (typed && !exactMatch) {
-    addBtn.classList.add('visible');
-    addTextEl.textContent = typed;
-  } else {
-    addBtn.classList.remove('visible');
-  }
-}
-
-function buildComboPill(docId, name) {
-  const pill = document.createElement('div');
-  pill.className = 'name-pill';
-  pill.dataset.docId = docId;
-  pill.dataset.name = name;
-
-  pill.innerHTML = `
-    <span class="avatar">${initials(name)}</span>
-    <span class="pill-label" title="Use this name">${escapeHtml(name)}</span>
-    <div class="pill-actions">
-      <button class="pill-icon-btn" title="Edit name" onclick="event.stopPropagation(); startEditCombo(this)">✎</button>
-      <button class="pill-icon-btn danger" title="Remove name" onclick="event.stopPropagation(); deleteComboName(this)">✕</button>
-    </div>
-  `;
-
-  pill.querySelector('.pill-label').onclick = () => selectComboName(name);
-  return pill;
-}
-
-function selectComboName(name) {
-  document.getElementById('cpName').value = name;
-  saveNameToFirestore(name);
-  closeNameDropdown();
-  updatePreview();
-}
-
-function addNameFromInput() {
-  const input = document.getElementById('cpName');
-  const name = input.value.trim();
-  if (!name) return;
-  saveNameToFirestore(name).then(() => loadNamesCache());
-  closeNameDropdown();
-  updatePreview();
-}
-
-function onCpNameInput() {
-  renderNameComboList();
-  if (!nameComboOpen) openNameDropdown();
-  updatePreview();
-}
-
-function openNameDropdown() {
-  nameComboOpen = true;
-  document.getElementById('nameComboDropdown').classList.add('open');
-  renderNameComboList();
-}
-
-function closeNameDropdown() {
-  nameComboOpen = false;
-  document.getElementById('nameComboDropdown').classList.remove('open');
-}
-
-document.addEventListener('click', (e) => {
-  const wrap = document.getElementById('cpNameInner');
-  if (wrap && !wrap.contains(e.target)) closeNameDropdown();
-});
-
-function startEditCombo(btn) {
-  const pill = btn.closest('.name-pill');
-  const oldName = pill.dataset.name;
-
-  const label = pill.querySelector('.pill-label');
-  const actions = pill.querySelector('.pill-actions');
-
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'pill-edit-input';
-  input.value = oldName;
-  label.replaceWith(input);
-  input.focus();
-  input.select();
-  input.addEventListener('click', (e) => e.stopPropagation());
-
-  actions.innerHTML = `
-    <button class="pill-icon-btn confirm" title="Save">✓</button>
-    <button class="pill-icon-btn danger" title="Cancel">✕</button>
-  `;
-  const [saveBtn, cancelBtn] = actions.querySelectorAll('.pill-icon-btn');
-
-  const finishEdit = (commit) => {
-    if (commit) {
-      const newName = input.value.trim();
-      if (newName && newName !== oldName) {
-        showConfirmDialog({
-          title: 'Rename this profile?',
-          message: `Rename <strong>${escapeHtml(oldName)}</strong> to <strong>${escapeHtml(newName)}</strong>? This updates the saved name in the database.`,
-          okLabel: 'Rename',
-          okClass: 'primary',
-          onConfirm: () => renameSavedUser(pill.dataset.docId, oldName, newName),
-          onCancel: () => renderNameComboList()
-        });
-        return;
-      }
-    }
-    renderNameComboList();
-  };
-
-  saveBtn.onclick = (e) => { e.stopPropagation(); finishEdit(true); };
-  cancelBtn.onclick = (e) => { e.stopPropagation(); finishEdit(false); };
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') finishEdit(true);
-    if (e.key === 'Escape') finishEdit(false);
-  });
-}
-
-async function renameSavedUser(oldDocId, oldName, newName) {
-  const newDocId = newName.trim().toLowerCase().replace(/\s+/g, '-');
-  try {
-    await db.collection(USERS_COLLECTION).doc(newDocId).set({
-      name: newName.trim(),
-      lastUsed: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    if (newDocId !== oldDocId) {
-      await db.collection(USERS_COLLECTION).doc(oldDocId).delete();
-    }
-    const cpInput = document.getElementById('cpName');
-    if (cpInput.value.trim() === oldName) {
-      cpInput.value = newName.trim();
-      updatePreview();
-    }
-  } catch (err) {
-    console.error('Failed to rename user:', err);
-  }
-  await loadNamesCache();
-}
-
-function deleteComboName(btn) {
-  const pill = btn.closest('.name-pill');
-  const docId = pill.dataset.docId;
-  const name = pill.dataset.name;
-
-  showConfirmDialog({
-    title: 'Remove this name?',
-    message: `Are you sure you want to remove <strong>${escapeHtml(name)}</strong>? This will permanently delete it from the database.`,
-    okLabel: 'Remove',
-    okClass: 'danger',
-    onConfirm: async () => {
-      try {
-        await db.collection(USERS_COLLECTION).doc(docId).delete();
-      } catch (err) {
-        console.error('Failed to delete user:', err);
-      }
-
-      const cpInput = document.getElementById('cpName');
-      if (cpInput.value.trim() === name) {
-        cpInput.value = '';
-        updatePreview();
-      }
-
-      await loadNamesCache();
-    },
-    onCancel: () => renderNameComboList()
-  });
 }
 
 /* ════════════════════════════════════════════
@@ -1442,43 +2030,17 @@ const VENDOR_CONFIG = {
   hn:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
   partnerportal: { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
 };
-
 const VENDOR_LABELS = {
-  barracuda:     'Barracuda',
-  zo:            'ZO',
-  az:            'AZ',
-  checkpoint:    'Checkpoint',
-  microsoft:     'Microsoft',
-  os:            'OS',
-  is:            'IS',
-  tw:            'TW',
-  so:            'SO',
-  fs:            'FS',
-  jn:            'JN',
-  hn:            'HN',
-  partnerportal: 'Partner Portal',
+  barracuda:'Barracuda', zo:'ZO', az:'AZ', checkpoint:'Checkpoint',
+  microsoft:'Microsoft', os:'OS', is:'IS', tw:'TW', so:'SO', fs:'FS',
+  jn:'JN', hn:'HN', partnerportal:'Partner Portal',
 };
-
 const VENDOR_WIKI_ABBR = {
-  barracuda:     'Barracuda',
-  zo:            'ZO',
-  az:            'AZ',
-  checkpoint:    'CP',
-  microsoft:     'MD',
-  os:            'OS',
-  is:            'IS',
-  tw:            'TW',
-  so:            'SO',
-  fs:            'FS',
-  jn:            'JN',
-  hn:            'HN',
-  partnerportal: 'Partner Portal',
+  barracuda:'Barracuda', zo:'ZO', az:'AZ', checkpoint:'CP',
+  microsoft:'MD', os:'OS', is:'IS', tw:'TW', so:'SO', fs:'FS',
+  jn:'JN', hn:'HN', partnerportal:'Partner Portal',
 };
-
-// Vendors that use the generic wiki section
 const GENERIC_WIKI_VENDORS = ['barracuda', 'microsoft', 'os', 'is', 'so', 'fs', 'jn', 'hn'];
-
-// Generic-wiki vendors whose File: line should say "accepted at"
 const GENERIC_WIKI_ACCEPTED_AT = ['os', 'is', 'so', 'fs', 'jn', 'hn'];
 
 /* ════════════════════════════════════════════
@@ -1486,67 +2048,38 @@ const GENERIC_WIKI_ACCEPTED_AT = ['os', 'is', 'so', 'fs', 'jn', 'hn'];
    ════════════════════════════════════════════ */
 let selectedPriority = 1;
 let mode = 'single';
+let selectedTicketType = 'Dispute';
+const nsStatus = { primary: 'add', secondary: 'none', security: 'add', tags: 'add' };
 
-/* NS Manager state */
-const nsStatus = {
-  primary: 'add',
-  secondary: 'none',
-  security: 'add',
-  tags: 'add'
-};
-
-window.addEventListener('DOMContentLoaded', () => {
+function initApp() {
   addRow();
-  loadNamesCache();
   updateNSFieldsVisibility();
-});
-
-// ── VENDOR ──
+  renderRotationBadge();
+}
 function onVendorChange() {
   const v = document.getElementById('vendor').value;
   const cfg = VENDOR_CONFIG[v] || { showPriority: false, availablePriorities: [], defaultPriority: 1 };
-
   document.getElementById('priorityField').style.display = cfg.showPriority ? 'block' : 'none';
-
   [1, 2, 3, 4].forEach(p => {
     const btn = document.querySelector(`.priority-btn[data-p="${p}"]`);
-    if (btn) {
-      btn.style.display = cfg.availablePriorities.includes(p) ? '' : 'none';
-    }
+    if (btn) btn.style.display = cfg.availablePriorities.includes(p) ? '' : 'none';
   });
-
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   selectedPriority = cfg.defaultPriority;
   const defaultBtn = document.querySelector(`.priority-btn[data-p="${selectedPriority}"]`);
   if (defaultBtn) defaultBtn.classList.add('active');
-
-  updateCpNameVisibility();
   updatePreview();
 }
-
 function selectPriority(btn) {
   const v = document.getElementById('vendor').value;
   const cfg = VENDOR_CONFIG[v] || { availablePriorities: [] };
   const p = parseInt(btn.dataset.p);
-
   if (!cfg.availablePriorities.includes(p)) return;
-
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selectedPriority = p;
-  updateCpNameVisibility();
   updatePreview();
 }
-
-// Name field is now shown whenever a vendor is selected (for all vendors)
-function updateCpNameVisibility() {
-  const v = document.getElementById('vendor').value;
-  const cpNameField = document.getElementById('cpNameField');
-  cpNameField.classList.toggle('visible', v !== '');
-  if (!v) closeNameDropdown();
-}
-
-// ── MODE ──
 function setMode(m) {
   mode = m;
   document.getElementById('single-mode').style.display = m === 'single' ? 'block' : 'none';
@@ -1555,8 +2088,6 @@ function setMode(m) {
   document.getElementById('btn-bulk').classList.toggle('active', m === 'bulk');
   updatePreview();
 }
-
-// ── URL ROWS ──
 function addRow() {
   const wrap = document.getElementById('url-rows');
   const idx  = wrap.children.length + 1;
@@ -1575,7 +2106,6 @@ function addRow() {
   updatePreview();
   row.querySelector('.inp-url').focus();
 }
-
 function delRow(btn) {
   const wrap = document.getElementById('url-rows');
   const row  = btn.closest('.url-row');
@@ -1584,34 +2114,21 @@ function delRow(btn) {
     row.querySelector('.inp-cat').value = '';
     row.querySelector('.inp-sec').value = '';
     row.querySelector('.inp-seccat').value = '';
-    updatePreview();
-    return;
+    updatePreview(); return;
   }
-  row.remove();
-  reindex();
-  updatePreview();
+  row.remove(); reindex(); updatePreview();
 }
-
 function reindex() {
   document.querySelectorAll('#url-rows .url-row').forEach((r, i) => {
     r.querySelector('.url-num').textContent = i + 1;
   });
 }
-
-// ── HELPERS ──
 function cleanUrl(url) {
-  return url
-    .trim()
-    .replace(/^https?:\/\//i, '')
-    .replace(/:(\d+)(\/.*)?$/, '$2')
-    .replace(/^www\./i, '')
-    .trim();
+  return url.trim().replace(/^https?:\/\//i, '').replace(/:(\d+)(\/.*)?$/, '$2').replace(/^www\./i, '').trim();
 }
-
 function getUrls() {
   if (mode === 'bulk') {
-    return document.getElementById('bulk-ta').value
-      .split('\n')
+    return document.getElementById('bulk-ta').value.split('\n')
       .map(l => ({ url: cleanUrl(l), cat: null, sec: null, secCat: '' }))
       .filter(r => r.url);
   }
@@ -1621,59 +2138,44 @@ function getUrls() {
       const catRaw    = row.querySelector('.inp-cat').value.trim();
       const secRaw    = row.querySelector('.inp-sec').value.trim();
       const secCatRaw = row.querySelector('.inp-seccat').value.trim();
-      const cat    = catRaw !== '' ? Number(catRaw) : null;
-      const sec    = secRaw !== '' ? Number(secRaw) : null;
-      const secCat = secCatRaw;
-      return { url, cat, sec, secCat };
+      const cat = catRaw !== '' ? Number(catRaw) : null;
+      const sec = secRaw !== '' ? Number(secRaw) : null;
+      return { url, cat, sec, secCat: secCatRaw };
     })
     .filter(r => r.url);
 }
-
 function getInvalidRows() {
   if (mode !== 'single') return { missingPrimary: [], missing20079Security: [] };
   const rows = Array.from(document.querySelectorAll('#url-rows .url-row'));
   const missingPrimary = [];
   const missing20079Security = [];
-
   rows.forEach((row, i) => {
     const url = cleanUrl(row.querySelector('.inp-url').value);
-    const catInput    = row.querySelector('.inp-cat');
-    const secInput    = row.querySelector('.inp-sec');
+    const catInput = row.querySelector('.inp-cat');
+    const secInput = row.querySelector('.inp-sec');
     const secCatInput = row.querySelector('.inp-seccat');
-
     catInput.classList.remove('has-error');
     secInput.classList.remove('has-error');
     secCatInput.classList.remove('has-error');
-
     if (!url) return;
-
-    const catRaw    = catInput.value.trim();
-    const secRaw    = secInput.value.trim();
+    const catRaw = catInput.value.trim();
+    const secRaw = secInput.value.trim();
     const secCatRaw = secCatInput.value.trim();
-
     if (catRaw === '' && (secRaw !== '' || secCatRaw !== '')) {
-      missingPrimary.push(i + 1);
-      catInput.classList.add('has-error');
-      return;
+      missingPrimary.push(i + 1); catInput.classList.add('has-error'); return;
     }
-
     if (catRaw === '20079' && secCatRaw === '') {
-      missing20079Security.push(i + 1);
-      secCatInput.classList.add('has-error');
+      missing20079Security.push(i + 1); secCatInput.classList.add('has-error');
     }
   });
-
   return { missingPrimary, missing20079Security };
 }
-
 function pad(n) { return String(n).padStart(2, '0'); }
-
 function formatImmutable(raw) {
   const n = parseInt(raw, 10);
   if (!n || n <= 0) return 'None';
   return `${pad(n)} URL${n >= 2 ? 's' : ''}`;
 }
-
 function formatSecurityCat(raw) {
   const v = (raw || '').trim();
   if (!v) return 'None';
@@ -1683,83 +2185,53 @@ function formatSecurityCat(raw) {
   }
   return v;
 }
-
 function getCpName() {
-  const raw = document.getElementById('cpName').value.trim();
-  return raw || 'Diovic';
+  if (!CURRENT_USER) return 'User';
+  return CURRENT_USER.agentName || CURRENT_USER.name || 'User';
 }
-
-function dateOnly(acc) {
-  return acc.replace('T', '').substring(0, 8);
-}
-
-// Wiki Comment: line — does it use "accepted at"?
+function dateOnly(acc) { return acc.replace('T', '').substring(0, 8); }
 function wikiCommentUsesAcceptedAt(vendor, priority) {
   if (vendor === 'barracuda') return false;
   if (vendor === 'microsoft' && priority === 1) return false;
   return true;
 }
-
-// Wiki File: line — does it include "accepted" at all?
 function wikiFileLineUsesAccepted(vendor, priority) {
   if (vendor === 'microsoft' && priority === 1) return false;
   if (vendor === 'barracuda') return false;
   return true;
 }
-
-// Wiki File: line — does it use "accepted at" (with "at")?
 function wikiFileLineUsesAcceptedAt(vendor, priority) {
   if (GENERIC_WIKI_ACCEPTED_AT.includes(vendor)) return true;
   if (vendor === 'microsoft' && priority === 3) return true;
   return false;
 }
-
-// ── FILENAME ──
 function getFilename() {
   const v   = document.getElementById('vendor').value;
   const acc = document.getElementById('accepted').value.trim();
   if (!v || !acc) return null;
-
   const p = selectedPriority;
   const name = getCpName();
-
   switch (v) {
-    case 'barracuda':
-      return `Disputes Priority 1 Barracuda accepted at ${acc} ${name}`;
-    case 'zo':
-      return `Disputes Priority ${p} ZO accepted at ${acc} ${name}`;
-    case 'az':
-      return `Disputes Priority ${p} AZ accepted at ${acc} ${name}`;
-    case 'checkpoint':
-      return p === 1
-        ? `Disputes Priority 1 Checkpoint ${acc} ${name}`
-        : `Disputes Priority ${p} Checkpoint ${acc} ${name}`;
-    case 'microsoft':
-      return p === 1
-        ? `Disputes Priority 1 Microsoft ${acc} ${name}`
-        : `Disputes Priority ${p} Microsoft accepted at ${acc} ${name}`;
-    case 'os':
-      return `Disputes Priority ${p} OS accepted at ${acc} ${name}`;
-    case 'is':
-      return `Disputes Priority ${p} IS accepted at ${acc} ${name}`;
-    case 'tw':
-      return `Disputes Priority 1 TW accepted at ${acc} ${name}`;
-    case 'so':
-      return `Disputes Priority ${p} SO accepted at ${acc} ${name}`;
-    case 'fs':
-      return `Disputes Priority ${p} FS accepted at ${acc} ${name}`;
-    case 'jn':
-      return `Disputes Priority ${p} JN accepted at ${acc} ${name}`;
-    case 'hn':
-      return `Disputes Priority ${p} HN accepted at ${acc} ${name}`;
-    case 'partnerportal':
-      return `P1 dispute Partner Portal ${acc} ${name}`;
-    default:
-      return null;
+    case 'barracuda':     return `Disputes Priority 1 Barracuda accepted at ${acc} ${name}`;
+    case 'zo':            return `Disputes Priority ${p} ZO accepted at ${acc} ${name}`;
+    case 'az':            return `Disputes Priority ${p} AZ accepted at ${acc} ${name}`;
+    case 'checkpoint':    return p === 1
+                            ? `Disputes Priority 1 Checkpoint ${acc} ${name}`
+                            : `Disputes Priority ${p} Checkpoint ${acc} ${name}`;
+    case 'microsoft':     return p === 1
+                            ? `Disputes Priority 1 Microsoft ${acc} ${name}`
+                            : `Disputes Priority ${p} Microsoft accepted at ${acc} ${name}`;
+    case 'os':            return `Disputes Priority ${p} OS accepted at ${acc} ${name}`;
+    case 'is':            return `Disputes Priority ${p} IS accepted at ${acc} ${name}`;
+    case 'tw':            return `Disputes Priority 1 TW accepted at ${acc} ${name}`;
+    case 'so':            return `Disputes Priority ${p} SO accepted at ${acc} ${name}`;
+    case 'fs':            return `Disputes Priority ${p} FS accepted at ${acc} ${name}`;
+    case 'jn':            return `Disputes Priority ${p} JN accepted at ${acc} ${name}`;
+    case 'hn':            return `Disputes Priority ${p} HN accepted at ${acc} ${name}`;
+    case 'partnerportal': return `P1 dispute Partner Portal ${acc} ${name}`;
+    default: return null;
   }
 }
-
-// ── NS MANAGER STATUS ──
 function selectNSStatus(section, status, btn) {
   nsStatus[section] = status;
   const group = btn.closest('.ns-status-group');
@@ -1768,245 +2240,143 @@ function selectNSStatus(section, status, btn) {
   updateNSFieldsVisibility();
   updatePreview();
 }
-
 function updateNSFieldsVisibility() {
-  // Primary
-  const primaryFields = document.getElementById('nsPrimaryFields');
-  const primaryCatField = document.getElementById('nsPrimaryCatField');
-  const primaryNewField = document.getElementById('nsPrimaryNewField');
-  const primaryCatLabel = document.getElementById('nsPrimaryCatLabel');
-
-  if (nsStatus.primary === 'add' || nsStatus.primary === 'retained' || nsStatus.primary === 'changed' || nsStatus.primary === 'removed') {
-    primaryFields.classList.add('visible');
-    if (nsStatus.primary === 'changed') {
-      primaryCatLabel.textContent = 'Original category name';
-      primaryCatField.style.display = 'block';
-      primaryNewField.style.display = 'block';
-    } else {
-      primaryCatLabel.textContent = 'Category name';
-      primaryCatField.style.display = 'block';
-      primaryNewField.style.display = 'none';
-    }
-  } else {
-    primaryFields.classList.remove('visible');
-  }
-
-  // Secondary
-  const secondaryFields = document.getElementById('nsSecondaryFields');
-  const secondaryCatField = document.getElementById('nsSecondaryCatField');
-  const secondaryNewField = document.getElementById('nsSecondaryNewField');
-  const secondaryCatLabel = document.getElementById('nsSecondaryCatLabel');
-
+  const pF = document.getElementById('nsPrimaryFields');
+  const pC = document.getElementById('nsPrimaryCatField');
+  const pN = document.getElementById('nsPrimaryNewField');
+  const pL = document.getElementById('nsPrimaryCatLabel');
+  pF.classList.add('visible');
+  if (nsStatus.primary === 'changed') { pL.textContent = 'Original category name'; pC.style.display = 'block'; pN.style.display = 'block'; }
+  else { pL.textContent = 'Category name'; pC.style.display = 'block'; pN.style.display = 'none'; }
+  const sF = document.getElementById('nsSecondaryFields');
+  const sC = document.getElementById('nsSecondaryCatField');
+  const sN = document.getElementById('nsSecondaryNewField');
+  const sL = document.getElementById('nsSecondaryCatLabel');
   if (nsStatus.secondary !== 'none') {
-    secondaryFields.classList.add('visible');
-    if (nsStatus.secondary === 'changed') {
-      secondaryCatLabel.textContent = 'Original category name';
-      secondaryCatField.style.display = 'block';
-      secondaryNewField.style.display = 'block';
-    } else {
-      secondaryCatLabel.textContent = 'Category name';
-      secondaryCatField.style.display = 'block';
-      secondaryNewField.style.display = 'none';
-    }
-  } else {
-    secondaryFields.classList.remove('visible');
-  }
-
-  // Security
-  const securityFields = document.getElementById('nsSecurityFields');
-  const securityCatField = document.getElementById('nsSecurityCatField');
-  const securityNewField = document.getElementById('nsSecurityNewField');
-  const securityCatLabel = document.getElementById('nsSecurityCatLabel');
-
-  if (nsStatus.security === 'add' || nsStatus.security === 'retained' || nsStatus.security === 'changed' || nsStatus.security === 'removed') {
-    securityFields.classList.add('visible');
-    if (nsStatus.security === 'changed') {
-      securityCatLabel.textContent = 'Original category name';
-      securityCatField.style.display = 'block';
-      securityNewField.style.display = 'block';
-    } else {
-      securityCatLabel.textContent = 'Category name';
-      securityCatField.style.display = 'block';
-      securityNewField.style.display = 'none';
-    }
-  } else {
-    securityFields.classList.remove('visible');
-  }
-
-  // Tags
-  const tagsFields = document.getElementById('nsTagsFields');
-  const tagsCatField = document.getElementById('nsTagsCatField');
-  const tagsNewField = document.getElementById('nsTagsNewField');
-  const tagsCatLabel = document.getElementById('nsTagsCatLabel');
-
-  if (nsStatus.tags === 'add' || nsStatus.tags === 'retained' || nsStatus.tags === 'changed' || nsStatus.tags === 'removed') {
-    tagsFields.classList.add('visible');
-    if (nsStatus.tags === 'changed') {
-      tagsCatLabel.textContent = 'Original tag';
-      tagsCatField.style.display = 'block';
-      tagsNewField.style.display = 'block';
-    } else {
-      tagsCatLabel.textContent = 'Tag';
-      tagsCatField.style.display = 'block';
-      tagsNewField.style.display = 'none';
-    }
-  } else {
-    tagsFields.classList.remove('visible');
-  }
+    sF.classList.add('visible');
+    if (nsStatus.secondary === 'changed') { sL.textContent = 'Original category name'; sC.style.display = 'block'; sN.style.display = 'block'; }
+    else { sL.textContent = 'Category name'; sC.style.display = 'block'; sN.style.display = 'none'; }
+  } else sF.classList.remove('visible');
+  const secF = document.getElementById('nsSecurityFields');
+  const secC = document.getElementById('nsSecurityCatField');
+  const secN = document.getElementById('nsSecurityNewField');
+  const secL = document.getElementById('nsSecurityCatLabel');
+  secF.classList.add('visible');
+  if (nsStatus.security === 'changed') { secL.textContent = 'Original category name'; secC.style.display = 'block'; secN.style.display = 'block'; }
+  else { secL.textContent = 'Category name'; secC.style.display = 'block'; secN.style.display = 'none'; }
+  const tF = document.getElementById('nsTagsFields');
+  const tC = document.getElementById('nsTagsCatField');
+  const tN = document.getElementById('nsTagsNewField');
+  const tL = document.getElementById('nsTagsCatLabel');
+  tF.classList.add('visible');
+  if (nsStatus.tags === 'changed') { tL.textContent = 'Original tag'; tC.style.display = 'block'; tN.style.display = 'block'; }
+  else { tL.textContent = 'Tag'; tC.style.display = 'block'; tN.style.display = 'none'; }
 }
-
-// Determine which wiki Security Category input has a number (drives NS Report visibility)
 function getWikiSecurityNumber() {
   const v = document.getElementById('vendor').value;
   let raw = '';
-  if (v === 'checkpoint') {
-    raw = document.getElementById('cpSecurityCat').value.trim();
-  } else if (v === 'tw') {
-    raw = document.getElementById('twSecurityCat').value.trim();
-  } else if (v === 'zo') {
-    raw = document.getElementById('zoSecurityCat').value.trim();
-  } else if (v === 'az') {
-    raw = document.getElementById('azSecurityCat').value.trim();
-  } else if (GENERIC_WIKI_VENDORS.includes(v)) {
-    raw = document.getElementById('genSecurityCat').value.trim();
-  }
+  if (v === 'checkpoint') raw = document.getElementById('cpSecurityCat').value.trim();
+  else if (v === 'tw') raw = document.getElementById('twSecurityCat').value.trim();
+  else if (v === 'zo') raw = document.getElementById('zoSecurityCat').value.trim();
+  else if (v === 'az') raw = document.getElementById('azSecurityCat').value.trim();
+  else if (GENERIC_WIKI_VENDORS.includes(v)) raw = document.getElementById('genSecurityCat').value.trim();
   if (!raw) return null;
   if (!/^\d+$/.test(raw)) return null;
   const n = parseInt(raw, 10);
   return n > 0 ? n : null;
 }
-
-// ── NS REPORT (plain text for clipboard) ──
 function buildNSReport() {
   const acc = document.getElementById('accepted').value.trim();
   const secUrl = document.getElementById('nsSecurityUrl').value.trim();
   if (!acc) return null;
-
   const v = document.getElementById('vendor').value;
   const vendorLabel = VENDOR_LABELS[v] || v;
   const p = selectedPriority;
-
   const lines = [];
-  lines.push('Hi All,');
-  lines.push('');
-  lines.push(`We received a ${vendorLabel} Disputes Priority ${p} accepted at ${acc} UTC`);
-  lines.push('');
+  lines.push('Hi All,', '');
+  lines.push(`We received a ${vendorLabel} Disputes Priority ${p} accepted at ${acc} UTC`, '');
   if (secUrl) lines.push(secUrl);
   lines.push('');
-
   const primaryCat = document.getElementById('nsPrimaryCat').value.trim();
-  const primaryNewCat = document.getElementById('nsPrimaryNewCat').value.trim();
   if (nsStatus.primary === 'add' && primaryCat) lines.push(`Primary: ${primaryCat}; added`);
   else if (nsStatus.primary === 'retained' && primaryCat) lines.push(`Primary: ${primaryCat}; retained`);
   else if (nsStatus.primary === 'changed' && primaryCat) lines.push(`Primary: ${primaryCat}; changed`);
   else if (nsStatus.primary === 'removed' && primaryCat) lines.push(`Primary: ${primaryCat}; removed`);
-
   const secondaryCat = document.getElementById('nsSecondaryCat').value.trim();
-  const secondaryNewCat = document.getElementById('nsSecondaryNewCat').value.trim();
   if (nsStatus.secondary === 'add' && secondaryCat) lines.push(`Secondary: ${secondaryCat}; added`);
   else if (nsStatus.secondary === 'retained' && secondaryCat) lines.push(`Secondary: ${secondaryCat}; retained`);
   else if (nsStatus.secondary === 'changed' && secondaryCat) lines.push(`Secondary: ${secondaryCat}; changed`);
   else if (nsStatus.secondary === 'removed' && secondaryCat) lines.push(`Secondary: ${secondaryCat}; removed`);
-
   const securityCat = document.getElementById('nsSecurityCat').value.trim();
-  const securityNewCat = document.getElementById('nsSecurityNewCat').value.trim();
   if (nsStatus.security === 'add' && securityCat) lines.push(`Security: ${securityCat}; added`);
   else if (nsStatus.security === 'retained' && securityCat) lines.push(`Security: ${securityCat}; retained`);
   else if (nsStatus.security === 'changed' && securityCat) lines.push(`Security: ${securityCat}; changed`);
   else if (nsStatus.security === 'removed' && securityCat) lines.push(`Security: ${securityCat}; removed`);
-
   const tagsCat = document.getElementById('nsTagsCat').value.trim();
-  const tagsNewCat = document.getElementById('nsTagsNewCat').value.trim();
   if (nsStatus.tags === 'add' && tagsCat) lines.push(`Tags: ${tagsCat}; added`);
   else if (nsStatus.tags === 'retained' && tagsCat) lines.push(`Tags: ${tagsCat}; retained`);
   else if (nsStatus.tags === 'changed' && tagsCat) lines.push(`Tags: ${tagsCat}; changed`);
   else if (nsStatus.tags === 'removed' && tagsCat) lines.push(`Tags: ${tagsCat}; removed`);
-
+  const primaryNewCat = document.getElementById('nsPrimaryNewCat').value.trim();
+  const secondaryNewCat = document.getElementById('nsSecondaryNewCat').value.trim();
+  const securityNewCat = document.getElementById('nsSecurityNewCat').value.trim();
+  const tagsNewCat = document.getElementById('nsTagsNewCat').value.trim();
   const changedLines = [];
   if (nsStatus.primary === 'changed' && primaryNewCat) changedLines.push(`⇒Primary: ${primaryNewCat}`);
   if (nsStatus.secondary === 'changed' && secondaryNewCat) changedLines.push(`⇒Secondary: ${secondaryNewCat}`);
   if (nsStatus.security === 'changed' && securityNewCat) changedLines.push(`⇒Security: ${securityNewCat}`);
   if (nsStatus.tags === 'changed' && tagsNewCat) changedLines.push(`⇒Tags: ${tagsNewCat}`);
-
-  if (changedLines.length > 0) {
-    lines.push('');
-    changedLines.forEach(l => lines.push(l));
-  }
-
-  lines.push('');
-  lines.push(`Comment: Disputes priority ${p} ${vendorLabel} accepted at ${acc}`);
-  lines.push('');
-  lines.push('-This site is a malware based on NetSTAR SHIELD.');
-
+  if (changedLines.length > 0) { lines.push(''); changedLines.forEach(l => lines.push(l)); }
+  lines.push('', `Comment: Disputes priority ${p} ${vendorLabel} accepted at ${acc}`, '', '-This site is a malware based on NetSTAR SHIELD.');
   return lines.join('\n');
 }
-
 function renderNSReport() {
   const el = document.getElementById('ns-report-message');
   const report = buildNSReport();
   if (!report) { el.textContent = '—'; return; }
-
   const acc = document.getElementById('accepted').value.trim();
   const secUrl = document.getElementById('nsSecurityUrl').value.trim();
   const v = document.getElementById('vendor').value;
   const vendorLabel = VENDOR_LABELS[v] || v;
   const p = selectedPriority;
-
   const lines = [];
-  lines.push('Hi All,');
-  lines.push('');
-  lines.push(`We received a <span class="hl-ns-key">${vendorLabel}</span> Disputes Priority ${p} accepted at <span class="hl-ns-ts">${acc}</span> UTC`);
-  lines.push('');
+  lines.push('Hi All,', '');
+  lines.push(`We received a <span class="hl-ns-key">${vendorLabel}</span> Disputes Priority ${p} accepted at <span class="hl-ns-ts">${acc}</span> UTC`, '');
   if (secUrl) lines.push(`<span class="hl-ns-url">${secUrl}</span>`);
   lines.push('');
-
   const primaryCat = document.getElementById('nsPrimaryCat').value.trim();
-  const primaryNewCat = document.getElementById('nsPrimaryNewCat').value.trim();
   if (nsStatus.primary === 'add' && primaryCat) lines.push(`<span class="hl-ns-key">Primary:</span> ${primaryCat}; added`);
   else if (nsStatus.primary === 'retained' && primaryCat) lines.push(`<span class="hl-ns-key">Primary:</span> ${primaryCat}; retained`);
   else if (nsStatus.primary === 'changed' && primaryCat) lines.push(`<span class="hl-ns-key">Primary:</span> ${primaryCat}; changed`);
   else if (nsStatus.primary === 'removed' && primaryCat) lines.push(`<span class="hl-ns-key">Primary:</span> ${primaryCat}; removed`);
-
   const secondaryCat = document.getElementById('nsSecondaryCat').value.trim();
-  const secondaryNewCat = document.getElementById('nsSecondaryNewCat').value.trim();
   if (nsStatus.secondary === 'add' && secondaryCat) lines.push(`<span class="hl-ns-key">Secondary:</span> ${secondaryCat}; added`);
   else if (nsStatus.secondary === 'retained' && secondaryCat) lines.push(`<span class="hl-ns-key">Secondary:</span> ${secondaryCat}; retained`);
   else if (nsStatus.secondary === 'changed' && secondaryCat) lines.push(`<span class="hl-ns-key">Secondary:</span> ${secondaryCat}; changed`);
   else if (nsStatus.secondary === 'removed' && secondaryCat) lines.push(`<span class="hl-ns-key">Secondary:</span> ${secondaryCat}; removed`);
-
   const securityCat = document.getElementById('nsSecurityCat').value.trim();
-  const securityNewCat = document.getElementById('nsSecurityNewCat').value.trim();
   if (nsStatus.security === 'add' && securityCat) lines.push(`<span class="hl-ns-key">Security:</span> ${securityCat}; added`);
   else if (nsStatus.security === 'retained' && securityCat) lines.push(`<span class="hl-ns-key">Security:</span> ${securityCat}; retained`);
   else if (nsStatus.security === 'changed' && securityCat) lines.push(`<span class="hl-ns-key">Security:</span> ${securityCat}; changed`);
   else if (nsStatus.security === 'removed' && securityCat) lines.push(`<span class="hl-ns-key">Security:</span> ${securityCat}; removed`);
-
   const tagsCat = document.getElementById('nsTagsCat').value.trim();
-  const tagsNewCat = document.getElementById('nsTagsNewCat').value.trim();
   if (nsStatus.tags === 'add' && tagsCat) lines.push(`<span class="hl-ns-key">Tags:</span> ${tagsCat}; added`);
   else if (nsStatus.tags === 'retained' && tagsCat) lines.push(`<span class="hl-ns-key">Tags:</span> ${tagsCat}; retained`);
   else if (nsStatus.tags === 'changed' && tagsCat) lines.push(`<span class="hl-ns-key">Tags:</span> ${tagsCat}; changed`);
   else if (nsStatus.tags === 'removed' && tagsCat) lines.push(`<span class="hl-ns-key">Tags:</span> ${tagsCat}; removed`);
-
+  const primaryNewCat = document.getElementById('nsPrimaryNewCat').value.trim();
+  const secondaryNewCat = document.getElementById('nsSecondaryNewCat').value.trim();
+  const securityNewCat = document.getElementById('nsSecurityNewCat').value.trim();
+  const tagsNewCat = document.getElementById('nsTagsNewCat').value.trim();
   const changedLines = [];
   if (nsStatus.primary === 'changed' && primaryNewCat) changedLines.push(`<span class="hl-ns-arrow">⇒Primary:</span> <span class="hl-ns-val">${primaryNewCat}</span>`);
   if (nsStatus.secondary === 'changed' && secondaryNewCat) changedLines.push(`<span class="hl-ns-arrow">⇒Secondary:</span> <span class="hl-ns-val">${secondaryNewCat}</span>`);
   if (nsStatus.security === 'changed' && securityNewCat) changedLines.push(`<span class="hl-ns-arrow">⇒Security:</span> <span class="hl-ns-val">${securityNewCat}</span>`);
   if (nsStatus.tags === 'changed' && tagsNewCat) changedLines.push(`<span class="hl-ns-arrow">⇒Tags:</span> <span class="hl-ns-val">${tagsNewCat}</span>`);
-
-  if (changedLines.length > 0) {
-    lines.push('');
-    changedLines.forEach(l => lines.push(l));
-  }
-
-  lines.push('');
-  lines.push(`Comment: Disputes priority ${p} <span class="hl-ns-key">${vendorLabel}</span> accepted at <span class="hl-ns-ts">${acc}</span>`);
-  lines.push('');
-  lines.push('-This site is a malware based on NetSTAR SHIELD.');
-
+  if (changedLines.length > 0) { lines.push(''); changedLines.forEach(l => lines.push(l)); }
+  lines.push('', `Comment: Disputes priority ${p} <span class="hl-ns-key">${vendorLabel}</span> accepted at <span class="hl-ns-ts">${acc}</span>`, '', '-This site is a malware based on NetSTAR SHIELD.');
   el.innerHTML = lines.join('\n');
 }
-
 function copyNSReport() {
   const report = buildNSReport();
   if (!report) return;
@@ -2015,17 +2385,10 @@ function copyNSReport() {
     const icon = document.getElementById('ns-copy-icon');
     const label = document.getElementById('ns-copy-label');
     btn.classList.add('copied');
-    icon.textContent = '✓';
-    label.textContent = 'Copied!';
-    setTimeout(() => {
-      btn.classList.remove('copied');
-      icon.textContent = '⎘';
-      label.textContent = 'Copy';
-    }, 2000);
+    icon.textContent = '✓'; label.textContent = 'Copied!';
+    setTimeout(() => { btn.classList.remove('copied'); icon.textContent = '⎘'; label.textContent = 'Copy'; }, 2000);
   });
 }
-
-// ── WIKI: CHECKPOINT ──
 function buildCPWikiText(acc, count, name, immutableRaw, secCatRaw) {
   const c = pad(count);
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
@@ -2034,7 +2397,6 @@ function buildCPWikiText(acc, count, name, immutableRaw, secCatRaw) {
   const secCat = formatSecurityCat(secCatRaw);
   return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
 }
-
 function renderCPWiki(acc, count, name, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -2056,8 +2418,6 @@ function renderCPWiki(acc, count, name, immutableRaw, secCatRaw) {
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
     `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
-
-// ── WIKI: TW ──
 function buildTWWikiText(acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
@@ -2067,7 +2427,6 @@ function buildTWWikiText(acc, count, immutableRaw, secCatRaw) {
   const secCat = formatSecurityCat(secCatRaw);
   return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes TW P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes Priority 1 TW accepted at ${d}\nTotal: ${c} ${totalLabel}\nCategorized: ${fraction}\nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 TW accepted at ${d}\n\n「The same category as the secondary」None\n「The URL already has the same categories with the same order」None\n「Tagged as Immutable」${immutable}\n「Security category」${secCat}`;
 }
-
 function renderTWWiki(acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -2090,8 +2449,6 @@ function renderTWWiki(acc, count, immutableRaw, secCatRaw) {
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span>\n` +
     `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
-
-// ── WIKI: GENERIC ──
 function buildGenericWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -2105,19 +2462,14 @@ function buildGenericWikiText(vendor, priority, acc, count, immutableRaw, secCat
   const commentAcceptedAt = wikiCommentUsesAcceptedAt(vendor, priority);
   const fileUsesAccepted = wikiFileLineUsesAccepted(vendor, priority);
   const fileUsesAcceptedAt = wikiFileLineUsesAcceptedAt(vendor, priority);
-
   const fileLine = fileUsesAccepted
-    ? (fileUsesAcceptedAt
-        ? `File: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}`
-        : `File: Disputes ${priorityLabel} ${vendorLabel} accepted ${acc}`)
+    ? (fileUsesAcceptedAt ? `File: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}` : `File: Disputes ${priorityLabel} ${vendorLabel} accepted ${acc}`)
     : `File: Disputes ${priorityLabel} ${vendorLabel} ${acc}`;
   const commentLine = commentAcceptedAt
     ? `Comment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}`
     : `Comment: Disputes ${priorityLabel} ${vendorLabel} ${acc}`;
-
   return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes ${abbr} ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n${fileLine} \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\n${commentLine}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
 }
-
 function renderGenericWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -2133,20 +2485,13 @@ function renderGenericWiki(vendor, priority, acc, count, immutableRaw, secCatRaw
   const commentAcceptedAt = wikiCommentUsesAcceptedAt(vendor, priority);
   const fileUsesAccepted = wikiFileLineUsesAccepted(vendor, priority);
   const fileUsesAcceptedAt = wikiFileLineUsesAcceptedAt(vendor, priority);
-
   let fileHtml;
-  if (!fileUsesAccepted) {
-    fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
-  } else if (fileUsesAcceptedAt) {
-    fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>`;
-  } else {
-    fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted <span class="hl-ts">${acc}</span>`;
-  }
-
+  if (!fileUsesAccepted) fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
+  else if (fileUsesAcceptedAt) fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>`;
+  else fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted <span class="hl-ts">${acc}</span>`;
   const commentHtml = commentAcceptedAt
     ? `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>`
     : `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
-
   document.getElementById('wiki-message-gen').innerHTML =
     `Hi Chisato-san,\n\n` +
     `Done uploading/updating on GD the data from disputes <span class="hl-key">${abbr}</span> <span class="hl-key">${pLabel}</span> 2026 file (<span class="hl-num">${c} ${totalLabel}</span>). Thank you.\n\n` +
@@ -2160,8 +2505,6 @@ function renderGenericWiki(vendor, priority, acc, count, immutableRaw, secCatRaw
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
     `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
-
-// ── WIKI: ZO ──
 function buildZOWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -2173,7 +2516,6 @@ function buildZOWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) 
   const priorityLabel = `priority ${priority}`;
   return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes ZO ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
 }
-
 function renderZOWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -2198,8 +2540,6 @@ function renderZOWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
     `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
-
-// ── WIKI: AZ ──
 function buildAZWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -2211,7 +2551,6 @@ function buildAZWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) 
   const priorityLabel = `priority ${priority}`;
   return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes AZ ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
 }
-
 function renderAZWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
@@ -2237,8 +2576,9 @@ function renderAZWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
     `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
 
-// ── PREVIEW ──
 function updatePreview() {
+  if (!CURRENT_USER) return;
+
   const fn      = getFilename();
   const rows    = getUrls();
   const v       = document.getElementById('vendor').value;
@@ -2263,8 +2603,8 @@ function updatePreview() {
   const wikiAzBadge  = document.getElementById('wiki-az-badge');
   const nsSection  = document.getElementById('ns-section');
   const nsBadge    = document.getElementById('ns-badge-text');
+  const mainGrid   = document.getElementById('mainGrid');
 
-  // CP2 stats (only relevant for CP P2)
   const cp2Section = document.getElementById('cp2Section');
   const showCp2 = (v === 'checkpoint' && selectedPriority === 2);
   cp2Section.classList.toggle('visible', showCp2);
@@ -2279,12 +2619,8 @@ function updatePreview() {
 
   if (hasInvalid) {
     const msgs = [];
-    if (invalid.missingPrimary.length > 0) {
-      msgs.push(`⚠ Row${invalid.missingPrimary.length > 1 ? 's' : ''} ${invalid.missingPrimary.join(', ')}: Secondary or Security was entered, so Primary (col B) is required before you can generate the file.`);
-    }
-    if (invalid.missing20079Security.length > 0) {
-      msgs.push(`⚠ Row${invalid.missing20079Security.length > 1 ? 's' : ''} ${invalid.missing20079Security.join(', ')}: Primary code 20079 requires a Security Category (col D) before you can generate the file.`);
-    }
+    if (invalid.missingPrimary.length > 0) msgs.push(`⚠ Row${invalid.missingPrimary.length > 1 ? 's' : ''} ${invalid.missingPrimary.join(', ')}: Secondary or Security was entered, so Primary (col B) is required before you can generate the file.`);
+    if (invalid.missing20079Security.length > 0) msgs.push(`⚠ Row${invalid.missing20079Security.length > 1 ? 's' : ''} ${invalid.missing20079Security.join(', ')}: Primary code 20079 requires a Security Category (col D) before you can generate the file.`);
     banner.classList.add('visible');
     banner.innerHTML = msgs.join('<br>');
   } else {
@@ -2303,129 +2639,188 @@ function updatePreview() {
       if (withSec > 0)    subParts.push(`${withSec} with secondary code`);
       if (withSecCat > 0) subParts.push(`${withSecCat} with security category`);
       previewSub.textContent = subParts.join(' · ');
-    } else {
-      previewSub.textContent = 'No URLs entered yet';
-    }
+    } else previewSub.textContent = 'No URLs entered yet';
     btn.disabled = rows.length === 0 || hasInvalid;
   } else {
-    previewFn.textContent  = '—';
-    previewSub.textContent = '';
-    btn.disabled = true;
+    previewFn.textContent = '—'; previewSub.textContent = ''; btn.disabled = true;
   }
 
-  // CP wiki
+  let anyWikiVisible = false;
   if (v === 'checkpoint' && selectedPriority === 1 && acc && rows.length > 0) {
     wikiSecCp.classList.add('visible');
     renderCPWiki(acc, rows.length, name, document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
-  } else {
-    wikiSecCp.classList.remove('visible');
-  }
-
-  // TW wiki
+    anyWikiVisible = true;
+  } else wikiSecCp.classList.remove('visible');
   if (v === 'tw' && acc && rows.length > 0) {
     wikiSecTw.classList.add('visible');
     renderTWWiki(acc, rows.length, document.getElementById('twImmutable').value, document.getElementById('twSecurityCat').value);
-  } else {
-    wikiSecTw.classList.remove('visible');
-  }
-
-  // Generic wiki
+    anyWikiVisible = true;
+  } else wikiSecTw.classList.remove('visible');
   if (GENERIC_WIKI_VENDORS.includes(v) && acc && rows.length > 0) {
     wikiSecGen.classList.add('visible');
     wikiGenBadge.textContent = `${VENDOR_LABELS[v]} P${selectedPriority} only`;
-    renderGenericWiki(v, selectedPriority, acc, rows.length,
-      document.getElementById('genImmutable').value,
-      document.getElementById('genSecurityCat').value);
-  } else {
-    wikiSecGen.classList.remove('visible');
-  }
-
-  // ZO wiki
+    renderGenericWiki(v, selectedPriority, acc, rows.length, document.getElementById('genImmutable').value, document.getElementById('genSecurityCat').value);
+    anyWikiVisible = true;
+  } else wikiSecGen.classList.remove('visible');
   if (v === 'zo' && acc && rows.length > 0) {
     wikiSecZo.classList.add('visible');
     wikiZoBadge.textContent = `ZO P${selectedPriority} only`;
-    renderZOWiki(v, selectedPriority, acc, rows.length,
-      document.getElementById('zoImmutable').value,
-      document.getElementById('zoSecurityCat').value);
-  } else {
-    wikiSecZo.classList.remove('visible');
-  }
-
-  // AZ wiki
+    renderZOWiki(v, selectedPriority, acc, rows.length, document.getElementById('zoImmutable').value, document.getElementById('zoSecurityCat').value);
+    anyWikiVisible = true;
+  } else wikiSecZo.classList.remove('visible');
   if (v === 'az' && acc && rows.length > 0) {
     wikiSecAz.classList.add('visible');
     wikiAzBadge.textContent = `AZ P${selectedPriority} only`;
-    renderAZWiki(v, selectedPriority, acc, rows.length,
-      document.getElementById('azImmutable').value,
-      document.getElementById('azSecurityCat').value);
-  } else {
-    wikiSecAz.classList.remove('visible');
-  }
+    renderAZWiki(v, selectedPriority, acc, rows.length, document.getElementById('azImmutable').value, document.getElementById('azSecurityCat').value);
+    anyWikiVisible = true;
+  } else wikiSecAz.classList.remove('visible');
 
-  // NS Manager — shown when wiki Security Category has a number
+  mainGrid.classList.toggle('with-wiki', anyWikiVisible);
+
   const wikiSecNum = getWikiSecurityNumber();
   if (v && wikiSecNum !== null) {
     nsSection.classList.add('visible');
     nsBadge.textContent = `${VENDOR_LABELS[v] || v} P${selectedPriority} · ${wikiSecNum} security URL${wikiSecNum === 1 ? '' : 's'}`;
     renderNSReport();
-  } else {
-    nsSection.classList.remove('visible');
-  }
+  } else nsSection.classList.remove('visible');
 }
 
-// ── COPY WIKI ──
 function copyWiki(variant) {
   const v    = document.getElementById('vendor').value;
   const acc  = document.getElementById('accepted').value.trim();
   const rows = getUrls();
   const name = getCpName();
-
   let text = '';
-  if (variant === 'cp' && v === 'checkpoint' && selectedPriority === 1 && acc && rows.length) {
+  if (variant === 'cp' && v === 'checkpoint' && selectedPriority === 1 && acc && rows.length)
     text = buildCPWikiText(acc, rows.length, name, document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
-  } else if (variant === 'tw' && v === 'tw' && acc && rows.length) {
+  else if (variant === 'tw' && v === 'tw' && acc && rows.length)
     text = buildTWWikiText(acc, rows.length, document.getElementById('twImmutable').value, document.getElementById('twSecurityCat').value);
-  } else if (variant === 'gen' && GENERIC_WIKI_VENDORS.includes(v) && acc && rows.length) {
-    text = buildGenericWikiText(v, selectedPriority, acc, rows.length,
-      document.getElementById('genImmutable').value,
-      document.getElementById('genSecurityCat').value);
-  } else if (variant === 'zo' && v === 'zo' && acc && rows.length) {
-    text = buildZOWikiText(v, selectedPriority, acc, rows.length,
-      document.getElementById('zoImmutable').value,
-      document.getElementById('zoSecurityCat').value);
-  } else if (variant === 'az' && v === 'az' && acc && rows.length) {
-    text = buildAZWikiText(v, selectedPriority, acc, rows.length,
-      document.getElementById('azImmutable').value,
-      document.getElementById('azSecurityCat').value);
-  } else {
-    return;
-  }
+  else if (variant === 'gen' && GENERIC_WIKI_VENDORS.includes(v) && acc && rows.length)
+    text = buildGenericWikiText(v, selectedPriority, acc, rows.length, document.getElementById('genImmutable').value, document.getElementById('genSecurityCat').value);
+  else if (variant === 'zo' && v === 'zo' && acc && rows.length)
+    text = buildZOWikiText(v, selectedPriority, acc, rows.length, document.getElementById('zoImmutable').value, document.getElementById('zoSecurityCat').value);
+  else if (variant === 'az' && v === 'az' && acc && rows.length)
+    text = buildAZWikiText(v, selectedPriority, acc, rows.length, document.getElementById('azImmutable').value, document.getElementById('azSecurityCat').value);
+  else return;
 
   navigator.clipboard.writeText(text).then(() => {
     const btn   = document.getElementById(`copy-btn-${variant}`);
     const icon  = document.getElementById(`copy-icon-${variant}`);
     const label = document.getElementById(`copy-label-${variant}`);
     btn.classList.add('copied');
-    icon.textContent  = '✓';
-    label.textContent = 'Copied!';
-    setTimeout(() => {
-      btn.classList.remove('copied');
-      icon.textContent  = '⎘';
-      label.textContent = 'Copy';
-    }, 2000);
+    icon.textContent = '✓'; label.textContent = 'Copied!';
+    setTimeout(() => { btn.classList.remove('copied'); icon.textContent = '⎘'; label.textContent = 'Copy'; }, 2000);
   });
 }
 
-// ── GENERATE ──
-function generate() {
+/* ════════════════════════════════════════════
+   GENERATE + CONFIRM MODAL
+   ════════════════════════════════════════════ */
+function selectGenType(btn) {
+  selectedTicketType = btn.dataset.type;
+  document.querySelectorAll('.gen-type-pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+async function generate() {
   const fn      = getFilename();
   const rows    = getUrls();
   const invalid = getInvalidRows();
   const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
   if (!fn || !rows.length || hasInvalid) return;
 
-  const wb = XLSX.utils.book_new();
+  const v = document.getElementById('vendor').value;
+  document.getElementById('genConfirmTitle').textContent = fn;
+  document.getElementById('genConfirmVendor').textContent = VENDOR_LABELS[v] || v;
+  document.getElementById('genConfirmPriority').textContent = (VENDOR_CONFIG[v] && VENDOR_CONFIG[v].showPriority) ? `Priority ${selectedPriority}` : 'Priority 1';
+  document.getElementById('genConfirmAssignee').textContent = getCpName();
+  document.getElementById('genConfirmUrls').textContent = `${rows.length} URL${rows.length === 1 ? '' : 's'}`;
 
+  selectedTicketType = 'Dispute';
+  document.querySelectorAll('.gen-type-pill').forEach(b => b.classList.toggle('active', b.dataset.type === 'Dispute'));
+
+  const dupAlert = document.getElementById('genDupAlert');
+  const dupText  = document.getElementById('genDupText');
+  dupAlert.classList.add('hidden');
+  dupText.textContent = '—';
+
+  // 🆕 Rotation info
+  const rotInfo = document.getElementById('genRotInfo');
+  const rotIcon = document.getElementById('genRotIcon');
+  const rotText = document.getElementById('genRotText');
+  const wt = MONITORING_ROTATION.workingToday || [];
+
+  if (!wt.length) {
+    rotInfo.className = 'rot-info hidden';
+  } else if (isMyTurn()) {
+    const next = nextRotationPerson();
+    rotInfo.className = 'rot-info your-turn';
+    rotIcon.textContent = '✓';
+    rotText.innerHTML = `<strong>It's your turn!</strong> Since you're on rotation, this will advance the rotation to <strong>${escapeHtml(next || '—')}</strong>.
+      <span class="sub">After you confirm, the next person up in Handling Monitoring will be ${escapeHtml(next || '—')}.</span>`;
+  } else {
+    const cur = currentRotationPerson();
+    rotInfo.className = 'rot-info not-your-turn';
+    rotIcon.textContent = 'ℹ';
+    rotText.innerHTML = `<strong>Not your turn.</strong> Current rotation: <strong>${escapeHtml(cur || '—')}</strong>.
+      <span class="sub">The ticket will be added and assigned to you, but the rotation will NOT advance.</span>`;
+  }
+
+  const yesBtn = document.getElementById('genConfirmYesBtn');
+  yesBtn.disabled = false;
+  yesBtn.textContent = 'Yes, Generate & Add';
+
+  document.getElementById('genConfirmOverlay').classList.remove('hidden');
+
+  if (v === 'checkpoint') {
+    const ts = document.getElementById('accepted').value.trim();
+    if (ts) {
+      yesBtn.disabled = true;
+      yesBtn.textContent = 'Checking…';
+      const dup = await checkCheckpointDuplicate(ts);
+      if (dup) {
+        dupAlert.classList.remove('hidden');
+        dupText.innerHTML = `A <strong>Checkpoint</strong> ticket with this timestamp already exists:<br><strong>${escapeHtml(dup.title)}</strong><br><span style="opacity:0.8;">ID ${escapeHtml(dup.id)} · Assigned to ${escapeHtml(dup.assignee)}</span><br><br>You cannot generate another Checkpoint dispute with the same timestamp.`;
+        yesBtn.disabled = true;
+        yesBtn.textContent = 'Duplicate — Cannot Add';
+      } else {
+        yesBtn.disabled = false;
+        yesBtn.textContent = 'Yes, Generate & Add';
+      }
+    }
+  }
+}
+function closeGenConfirm() {
+  document.getElementById('genConfirmOverlay').classList.add('hidden');
+}
+async function confirmGenerate() {
+  const yesBtn = document.getElementById('genConfirmYesBtn');
+  yesBtn.disabled = true;
+  yesBtn.textContent = 'Working…';
+
+  const fn      = getFilename();
+  const rows    = getUrls();
+  const invalid = getInvalidRows();
+  const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
+  if (!fn || !rows.length || hasInvalid) { closeGenConfirm(); return; }
+
+  const v = document.getElementById('vendor').value;
+  if (v === 'checkpoint') {
+    const ts = document.getElementById('accepted').value.trim();
+    if (ts) {
+      const dup = await checkCheckpointDuplicate(ts);
+      if (dup) {
+        const dupAlert = document.getElementById('genDupAlert');
+        const dupText  = document.getElementById('genDupText');
+        dupAlert.classList.remove('hidden');
+        dupText.innerHTML = `A <strong>Checkpoint</strong> ticket with this timestamp already exists:<br><strong>${escapeHtml(dup.title)}</strong><br><span style="opacity:0.8;">ID ${escapeHtml(dup.id)} · Assigned to ${escapeHtml(dup.assignee)}</span><br><br>You cannot generate another Checkpoint dispute with the same timestamp.`;
+        yesBtn.disabled = true;
+        yesBtn.textContent = 'Duplicate — Cannot Add';
+        return;
+      }
+    }
+  }
+
+  const wb = XLSX.utils.book_new();
   const wsData = rows.map(({ url, cat, sec, secCat }) => {
     const hasSecurityCat = secCat !== null && secCat !== undefined && secCat !== '';
     const colD = hasSecurityCat ? secCat : 99999;
@@ -2438,12 +2833,22 @@ function generate() {
       'UCReviewed,CLReviewed,CLRetain,HTTPError,IWCC,InTheClear,Uncategorized,UnknownHost,Undeliverable,Deleted,StDnsError,NRD,DLCSkip'
     ];
   });
-
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [{ wch: 34 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 80 }];
-
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   XLSX.writeFile(wb, fn + '.xlsx');
+
+  const pushed = await pushTicketToMonitoring(fn, selectedTicketType);
+  if (pushed) {
+    console.log('✅ Ticket pushed:', pushed.ticketId, '| type:', pushed.type, '| rotation advanced:', pushed.advanced);
+    if (pushed.advanced) {
+      console.log(`🔁 ${pushed.rotationFrom} → ${pushed.rotationTo}`);
+    }
+  } else {
+    console.warn('⚠️ Push failed.');
+  }
+
+  closeGenConfirm();
 }
 </script>
 </body>
