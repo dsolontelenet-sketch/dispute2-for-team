@@ -216,6 +216,36 @@
   .main-header h1 { font-family: 'IBM Plex Mono', monospace; font-size: 0.92rem; font-weight: 600; color: var(--text); letter-spacing: 0.06em; text-transform: uppercase; }
   .main-header .page-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
 
+  /* ═══ ROTATION STATUS BADGE ═══ */
+  .rotation-status {
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 100px; padding: 0.28rem 0.75rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem;
+    color: var(--text-soft); transition: all 0.15s;
+  }
+  .rotation-status .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--muted); }
+  .rotation-status.is-me {
+    border-color: rgba(0,229,160,0.5);
+    background: rgba(0,229,160,0.08);
+    color: var(--success);
+  }
+  .rotation-status.is-me .dot {
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+    animation: pulseGreen 1.8s ease-in-out infinite;
+  }
+  .rotation-status.not-me {
+    border-color: rgba(255,184,77,0.35);
+    background: rgba(255,184,77,0.06);
+    color: var(--warning);
+  }
+  .rotation-status.not-me .dot { background: var(--warning); }
+  @keyframes pulseGreen {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(1.2); }
+  }
+
   /* ═══ PANEL MOUNT ═══ */
   .panel-mount {
     padding: 1.75rem;
@@ -633,6 +663,47 @@
   .gen-confirm-info .val.success { color: var(--success); }
   .gen-confirm-info .divider-sm { border-top: 1px solid var(--border); margin: 0.55rem 0; }
 
+  /* ═══ ROTATION INFO (modal) ═══ */
+  .rot-info {
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.75rem 0.95rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.5;
+  }
+  .rot-info.hidden { display: none; }
+  .rot-info.your-turn {
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.35);
+    color: var(--success);
+  }
+  .rot-info.not-your-turn {
+    background: rgba(255,184,77,0.07);
+    border: 1px solid rgba(255,184,77,0.3);
+    color: var(--warning);
+  }
+  .rot-info .icon { font-size: 1.05rem; line-height: 1; flex-shrink: 0; }
+  .rot-info strong { color: #fff; font-weight: 600; }
+  .rot-info .sub { display: block; font-size: 0.66rem; opacity: 0.85; margin-top: 0.15rem; }
+
+  /* ═══ DUP ALERT ═══ */
+  .dup-alert {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    background: rgba(255,77,77,0.08);
+    border: 1px solid rgba(255,77,77,0.3);
+    border-radius: 10px;
+    padding: 0.8rem 0.95rem;
+    margin-bottom: 1.1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; line-height: 1.55;
+    color: #ff8a8a;
+  }
+  .dup-alert.hidden { display: none; }
+  .dup-alert .icon { flex-shrink: 0; color: var(--danger); font-size: 0.95rem; line-height: 1.2; }
+  .dup-alert strong { color: #ffbaba; }
+
   .mobile-topbar { display: none; position: sticky; top: 0; z-index: 20; background: rgba(10,12,17,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); padding: 0.65rem 1rem; align-items: center; gap: 0.7rem; }
   .mobile-topbar button { width: 36px; height: 36px; background: var(--panel); border: 1px solid var(--border); border-radius: 9px; color: var(--text-soft); cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .mobile-topbar .m-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; font-weight: 600; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; }
@@ -773,6 +844,10 @@
         <div class="page-sub" id="pageSub">Create dispute files &amp; push tickets to Monitoring</div>
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <span class="rotation-status" id="rotStatus">
+          <span class="dot"></span>
+          <span id="rotStatusText">Checking rotation…</span>
+        </span>
         <span id="ticketSummaryChip" style="font-family:'IBM Plex Mono',monospace;font-size:0.66rem;color:var(--text-soft);background:var(--bg-elev);border:1px solid var(--border);border-radius:100px;padding:0.28rem 0.7rem;">Loading tickets…</span>
       </div>
     </header>
@@ -1175,6 +1250,17 @@
   <div class="confirm-card">
     <h3>Are you sure this is correct dispute?</h3>
     <p>It will be added to the Handling Monitoring dashboard as a ticket.</p>
+
+    <div class="rot-info hidden" id="genRotInfo">
+      <span class="icon" id="genRotIcon">✓</span>
+      <div id="genRotText">—</div>
+    </div>
+
+    <div class="dup-alert hidden" id="genDupAlert">
+      <span class="icon">⚠</span>
+      <div id="genDupText">—</div>
+    </div>
+
     <div class="gen-confirm-info">
       <div class="row"><span class="lbl">Ticket Title</span><span class="val accent" id="genConfirmTitle">—</span></div>
       <div class="divider-sm"></div>
@@ -1224,6 +1310,7 @@ const monitoringRtdb = monitoringApp.database();
 
 const monTicketsRef  = monitoringRtdb.ref('tickets');
 const monSeqRef      = monitoringRtdb.ref('meta/seqNum');
+const monRotationRef = monitoringRtdb.ref('meta/rotation');
 const monProfilesRef = monitoringRtdb.ref('profiles');
 const monPhotosRef   = monitoringRtdb.ref('profiles/photos');
 
@@ -1235,11 +1322,14 @@ const monFirestoreTickets  = monFirestore.collection('tickets');
    STATE
    ═══════════════════════════════════════════════════════════════ */
 let CURRENT_USER = null;
-let MY_TICKETS = [];               // merged raw: firestore + rtdb (matches Monitoring)
-let myFirestoreTickets = [];       // from Firestore
-let myRtdbTickets = [];            // from RTDB
-let myTicketsUnsub = null;         // RTDB unsubscribe
-let myFsTicketsUnsub = null;       // Firestore unsubscribe
+let MY_TICKETS = [];
+let myFirestoreTickets = [];
+let myRtdbTickets = [];
+let myTicketsUnsub = null;
+let myFsTicketsUnsub = null;
+
+let MONITORING_ROTATION = { rotationIndex: 0, workingToday: [] };
+let rotationListenerStarted = false;
 
 /* ═══════════════════════════════════════════════════════════════
    UTILITIES
@@ -1252,6 +1342,70 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 function pad(n) { return String(n).padStart(2, '0'); }
+
+/* ═══════════════════════════════════════════════════════════════
+   ROTATION HELPERS
+   ═══════════════════════════════════════════════════════════════ */
+function currentRotationPerson() {
+  const wt = MONITORING_ROTATION.workingToday || [];
+  if (!wt.length) return null;
+  const idx = (MONITORING_ROTATION.rotationIndex || 0) % wt.length;
+  return wt[idx];
+}
+function nextRotationPerson() {
+  const wt = MONITORING_ROTATION.workingToday || [];
+  if (!wt.length) return null;
+  const idx = (MONITORING_ROTATION.rotationIndex || 0) % wt.length;
+  return wt[(idx + 1) % wt.length];
+}
+function isMyTurn() {
+  if (!CURRENT_USER) return false;
+  const cur = currentRotationPerson();
+  if (!cur) return false;
+  return cur.trim().toLowerCase() === CURRENT_USER.agentName.trim().toLowerCase();
+}
+
+function renderRotationBadge() {
+  const el = document.getElementById('rotStatus');
+  const txt = document.getElementById('rotStatusText');
+  if (!el || !txt) return;
+
+  const wt = MONITORING_ROTATION.workingToday || [];
+  if (!wt.length) {
+    el.className = 'rotation-status';
+    txt.textContent = 'No rotation set';
+    return;
+  }
+  const cur = currentRotationPerson();
+  const mine = isMyTurn();
+  if (mine) {
+    el.className = 'rotation-status is-me';
+    txt.textContent = `Your turn · ${cur}`;
+  } else {
+    el.className = 'rotation-status not-me';
+    txt.textContent = `On rotation: ${cur}`;
+  }
+}
+
+function startRotationListener() {
+  if (rotationListenerStarted) return;
+  rotationListenerStarted = true;
+  monRotationRef.on('value', snap => {
+    const d = snap.val() || {};
+    MONITORING_ROTATION = {
+      rotationIndex: typeof d.rotationIndex === 'number' ? d.rotationIndex : 0,
+      workingToday: Array.isArray(d.workingToday) ? d.workingToday : []
+    };
+    renderRotationBadge();
+  }, err => { console.error('Rotation listener error:', err); });
+}
+function stopRotationListener() {
+  if (!rotationListenerStarted) return;
+  rotationListenerStarted = false;
+  monRotationRef.off();
+  MONITORING_ROTATION = { rotationIndex: 0, workingToday: [] };
+  renderRotationBadge();
+}
 
 /* ═══════════════════════════════════════════════════════════════
    AGENT IDENTITY RESOLVER
@@ -1610,15 +1764,10 @@ async function doChangePassword() {
   btn.textContent = 'Verifying…';
 
   try {
-    // 1) Verify current password by re-authenticating
     const cred = firebase.auth.EmailAuthProvider.credential(user.email, cur);
     await user.reauthenticateWithCredential(cred);
-
-    // 2) Update to the new password
     btn.textContent = 'Updating…';
     await user.updatePassword(nw);
-
-    // Success
     showPwdMsg('Password updated successfully. Use the new password next time you sign in.', 'ok');
     curEl.value = '';
     newEl.value = '';
@@ -1632,23 +1781,12 @@ async function doChangePassword() {
     let msg;
     switch (code) {
       case 'auth/wrong-password':
-      case 'auth/invalid-credential':
-        msg = 'Your current password is incorrect.';
-        break;
-      case 'auth/weak-password':
-        msg = 'New password is too weak (min 6 characters).';
-        break;
-      case 'auth/requires-recent-login':
-        msg = 'Please log out, sign in again, then retry.';
-        break;
-      case 'auth/too-many-requests':
-        msg = 'Too many attempts. Please wait a moment and try again.';
-        break;
-      case 'auth/network-request-failed':
-        msg = 'Network error. Check your connection.';
-        break;
-      default:
-        msg = (err && err.message) ? err.message : 'Could not update password.';
+      case 'auth/invalid-credential': msg = 'Your current password is incorrect.'; break;
+      case 'auth/weak-password': msg = 'New password is too weak (min 6 characters).'; break;
+      case 'auth/requires-recent-login': msg = 'Please log out, sign in again, then retry.'; break;
+      case 'auth/too-many-requests': msg = 'Too many attempts. Please wait a moment and try again.'; break;
+      case 'auth/network-request-failed': msg = 'Network error. Check your connection.'; break;
+      default: msg = (err && err.message) ? err.message : 'Could not update password.';
     }
     showPwdMsg(msg, 'error');
     btn.textContent = 'Update Password';
@@ -1695,7 +1833,9 @@ auth.onAuthStateChanged(async (user) => {
     showScreen('app');
     if (!window._appInited) { window._appInited = true; initApp(); }
     startMyTicketsListener();
+    startRotationListener();
     switchPanel('dashboard');
+    updatePreview();
   } else {
     CURRENT_USER = null;
     showScreen('auth');
@@ -1706,6 +1846,7 @@ auth.onAuthStateChanged(async (user) => {
     CLAIMED_AGENTS = {};
     setAuthTab('login');
     stopMyTicketsListener();
+    stopRotationListener();
     MY_TICKETS = [];
     myFirestoreTickets = [];
     myRtdbTickets = [];
@@ -1724,25 +1865,19 @@ function startMyTicketsListener() {
   if (!CURRENT_USER || !CURRENT_USER.agentName) return;
   const myNameLower = CURRENT_USER.agentName.trim().toLowerCase();
 
-  // 1) RTDB listener (new tickets)
   if (!myTicketsUnsub) {
     myTicketsUnsub = monTicketsRef.on('value', snap => {
       const raw = snap.val() || {};
       myRtdbTickets = Object.keys(raw).map(k => ({ _key: 'rtdb_' + k, _source: 'rtdb', ...raw[k] }));
       rebuildMyTickets(myNameLower);
-    }, err => {
-      console.error('RTDB tickets error:', err);
-    });
+    }, err => { console.error('RTDB tickets error:', err); });
   }
 
-  // 2) Firestore listener (old tickets)
   if (!myFsTicketsUnsub) {
     myFsTicketsUnsub = monFirestoreTickets.onSnapshot(snap => {
       myFirestoreTickets = snap.docs.map(d => ({ _key: 'fs_' + d.id, _source: 'fs', ...d.data() }));
       rebuildMyTickets(myNameLower);
-    }, err => {
-      console.error('Firestore tickets error:', err);
-    });
+    }, err => { console.error('Firestore tickets error:', err); });
   }
 }
 
@@ -1754,7 +1889,6 @@ function stopMyTicketsListener() {
   MY_TICKETS = [];
 }
 
-// ★★★ MATCHES MONITORING: raw merge, NO de-dupe ★★★
 function rebuildMyTickets(myNameLower) {
   MY_TICKETS = [...myFirestoreTickets, ...myRtdbTickets]
     .filter(t => (t.assignee || '').trim().toLowerCase() === myNameLower)
@@ -1809,6 +1943,8 @@ function switchPanel(name) {
     tkRender();
   } else if (name === 'settings') {
     renderSettingsPanel();
+  } else if (name === 'dashboard') {
+    updatePreview();
   }
 }
 
@@ -2585,31 +2721,101 @@ function copyWiki(variant) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TICKET PUSH
+   TICKET PUSH (with rotation advance)
    ═══════════════════════════════════════════════════════════════ */
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+
 async function pushTicketToMonitoring(title, type) {
   if (!title || !CURRENT_USER) return null;
   try {
+    // 1. Sequence
     const seqSnap = await monSeqRef.once('value');
     const seq = seqSnap.val() || 0;
     const nextSeq = seq + 1;
     const ticketId = 'TKT-' + String(nextSeq).padStart(4, '0');
+
+    // 2. Read latest rotation
+    const rotSnap = await monRotationRef.once('value');
+    const rotData = rotSnap.val() || {};
+    const wt = Array.isArray(rotData.workingToday) ? rotData.workingToday.slice() : [];
+    let rotIdx = typeof rotData.rotationIndex === 'number' ? rotData.rotationIndex : 0;
+    if (wt.length > 0) rotIdx = ((rotIdx % wt.length) + wt.length) % wt.length;
+
+    const myAgent = CURRENT_USER.agentName.trim().toLowerCase();
+    const rotPerson = wt.length ? wt[rotIdx] : null;
+    const myTurn = rotPerson && rotPerson.trim().toLowerCase() === myAgent;
+    const prevPerson = rotPerson;
+
+    let advanced = false;
+    let nextPerson = null;
+
+    if (myTurn && wt.length > 0) {
+      rotIdx = (rotIdx + 1) % wt.length;
+      nextPerson = wt[rotIdx];
+      advanced = true;
+    }
+
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const ts = Date.now();
+
+    // 3. Push ticket
     await monTicketsRef.push({
-      id: ticketId, seqNum: nextSeq, type: type || 'Dispute', title,
-      assignee: CURRENT_USER.agentName, date: dateStr, time: timeStr,
-      dateKey: todayKey(), status: 'Pending', ts
+      id: ticketId,
+      seqNum: nextSeq,
+      type: type || 'Dispute',
+      title,
+      assignee: CURRENT_USER.agentName,
+      date: dateStr,
+      time: timeStr,
+      dateKey: todayKey(),
+      status: 'Pending',
+      ts,
+      usedRotationTurn: advanced
     });
+
+    // 4. Bump seq + advance rotation
     await monSeqRef.set(nextSeq);
-    return { ticketId };
-  } catch (err) { console.error('Push failed:', err); return null; }
+    if (advanced) {
+      await monRotationRef.update({ rotationIndex: rotIdx });
+      console.log(`🔁 Rotation advanced: ${prevPerson} → ${nextPerson}`);
+    }
+
+    return {
+      ticketId,
+      title,
+      type: type || 'Dispute',
+      advanced,
+      rotationFrom: prevPerson,
+      rotationTo: nextPerson
+    };
+  } catch (err) {
+    console.error('Push failed:', err);
+    return null;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHECKPOINT DUPLICATE CHECK
+   ═══════════════════════════════════════════════════════════════ */
+async function checkCheckpointDuplicate(timestamp) {
+  if (!timestamp) return null;
+  try {
+    const snap = await monTicketsRef.once('value');
+    const all = snap.val() || {};
+    for (const key of Object.keys(all)) {
+      const t = all[key];
+      if (!t || !t.title) continue;
+      if ((t.title || '').includes(timestamp) && /Checkpoint/i.test(t.title)) {
+        return { id: t.id || '—', title: t.title, assignee: t.assignee || '—', key };
+      }
+    }
+    return null;
+  } catch (err) { console.error('Duplicate check failed:', err); return null; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2621,23 +2827,97 @@ async function generate() {
   const invalid = getInvalidRows();
   const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
   if (!fn || !rows.length || hasInvalid) return;
+
   const v = document.getElementById('vendor').value;
   document.getElementById('genConfirmTitle').textContent = fn;
   document.getElementById('genConfirmVendor').textContent = VENDOR_LABELS[v] || v;
   document.getElementById('genConfirmPriority').textContent = (VENDOR_CONFIG[v] && VENDOR_CONFIG[v].showPriority) ? `Priority ${selectedPriority}` : 'Priority 1';
   document.getElementById('genConfirmAssignee').textContent = getCpName();
   document.getElementById('genConfirmUrls').textContent = `${rows.length} URL${rows.length === 1 ? '' : 's'}`;
+
+  // Reset dup alert
+  const dupAlert = document.getElementById('genDupAlert');
+  const dupText  = document.getElementById('genDupText');
+  dupAlert.classList.add('hidden');
+  dupText.textContent = '—';
+
+  // Rotation info
+  const rotInfo = document.getElementById('genRotInfo');
+  const rotIcon = document.getElementById('genRotIcon');
+  const rotText = document.getElementById('genRotText');
+  const wt = MONITORING_ROTATION.workingToday || [];
+
+  if (!wt.length) {
+    rotInfo.className = 'rot-info hidden';
+  } else if (isMyTurn()) {
+    const next = nextRotationPerson();
+    rotInfo.className = 'rot-info your-turn';
+    rotIcon.textContent = '✓';
+    rotText.innerHTML = `<strong>It's your turn!</strong> Since you're on rotation, this will advance the rotation to <strong>${escapeHtml(next || '—')}</strong>.
+      <span class="sub">After you confirm, the next person up in Handling Monitoring will be ${escapeHtml(next || '—')}.</span>`;
+  } else {
+    const cur = currentRotationPerson();
+    rotInfo.className = 'rot-info not-your-turn';
+    rotIcon.textContent = 'ℹ';
+    rotText.innerHTML = `<strong>Not your turn.</strong> Current rotation: <strong>${escapeHtml(cur || '—')}</strong>.
+      <span class="sub">The ticket will be added and assigned to you, but the rotation will NOT advance.</span>`;
+  }
+
   const yesBtn = document.getElementById('genConfirmYesBtn');
-  yesBtn.disabled = false; yesBtn.textContent = 'Yes, Generate & Add';
+  yesBtn.disabled = false;
+  yesBtn.textContent = 'Yes, Generate & Add';
+
   document.getElementById('genConfirmOverlay').classList.remove('hidden');
+
+  // Checkpoint duplicate check
+  if (v === 'checkpoint') {
+    const ts = document.getElementById('accepted').value.trim();
+    if (ts) {
+      yesBtn.disabled = true;
+      yesBtn.textContent = 'Checking…';
+      const dup = await checkCheckpointDuplicate(ts);
+      if (dup) {
+        dupAlert.classList.remove('hidden');
+        dupText.innerHTML = `A <strong>Checkpoint</strong> ticket with this timestamp already exists:<br><strong>${escapeHtml(dup.title)}</strong><br><span style="opacity:0.8;">ID ${escapeHtml(dup.id)} · Assigned to ${escapeHtml(dup.assignee)}</span><br><br>You cannot generate another Checkpoint dispute with the same timestamp.`;
+        yesBtn.disabled = true;
+        yesBtn.textContent = 'Duplicate — Cannot Add';
+      } else {
+        yesBtn.disabled = false;
+        yesBtn.textContent = 'Yes, Generate & Add';
+      }
+    }
+  }
 }
 function closeGenConfirm() { document.getElementById('genConfirmOverlay').classList.add('hidden'); }
+
 async function confirmGenerate() {
   const yesBtn = document.getElementById('genConfirmYesBtn');
   yesBtn.disabled = true; yesBtn.textContent = 'Working…';
+
   const fn      = getFilename();
   const rows    = getUrls();
   if (!fn || !rows.length) { closeGenConfirm(); return; }
+
+  const v = document.getElementById('vendor').value;
+
+  // Checkpoint duplicate re-check before pushing
+  if (v === 'checkpoint') {
+    const ts = document.getElementById('accepted').value.trim();
+    if (ts) {
+      const dup = await checkCheckpointDuplicate(ts);
+      if (dup) {
+        const dupAlert = document.getElementById('genDupAlert');
+        const dupText  = document.getElementById('genDupText');
+        dupAlert.classList.remove('hidden');
+        dupText.innerHTML = `A <strong>Checkpoint</strong> ticket with this timestamp already exists:<br><strong>${escapeHtml(dup.title)}</strong><br><span style="opacity:0.8;">ID ${escapeHtml(dup.id)} · Assigned to ${escapeHtml(dup.assignee)}</span><br><br>You cannot generate another Checkpoint dispute with the same timestamp.`;
+        yesBtn.disabled = true;
+        yesBtn.textContent = 'Duplicate — Cannot Add';
+        return;
+      }
+    }
+  }
+
+  // Build & download Excel
   const wb = XLSX.utils.book_new();
   const wsData = rows.map(({ url, cat, sec, secCat }) => {
     const hasSecurityCat = secCat !== null && secCat !== undefined && secCat !== '';
@@ -2653,7 +2933,16 @@ async function confirmGenerate() {
   ws['!cols'] = [{ wch: 34 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 80 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   XLSX.writeFile(wb, fn + '.xlsx');
-  await pushTicketToMonitoring(fn, 'Dispute');
+
+  // Push ticket (and advance rotation if it's our turn)
+  const pushed = await pushTicketToMonitoring(fn, 'Dispute');
+  if (pushed) {
+    console.log('✅ Ticket pushed:', pushed.ticketId, '| type:', pushed.type, '| rotation advanced:', pushed.advanced);
+    if (pushed.advanced) console.log(`🔁 ${pushed.rotationFrom} → ${pushed.rotationTo}`);
+  } else {
+    console.warn('⚠️ Push failed.');
+  }
+
   closeGenConfirm();
 }
 
