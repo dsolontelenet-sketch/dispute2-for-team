@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -779,6 +780,45 @@
     .tk-table thead th, .tk-table td { padding: 0.65rem 0.7rem; }
     .tk-table td.td-title { min-width: 0; }
   }
+/* ═══ UPDATE NOTICE ═══ */
+.update-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 0 2rem;
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 184, 77, 0.08);
+  border: 1px solid rgba(255, 184, 77, 0.35);
+  border-radius: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--warning);
+  animation: noticePulse 2.4s ease-in-out infinite;
+}
+.update-notice .notice-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.update-notice strong {
+  color: #ffd699;
+  font-weight: 700;
+}
+.update-notice .notice-link {
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.update-notice .notice-link:hover { color: #66e6ff; }
+
+@keyframes noticePulse {
+  0%, 100% { border-color: rgba(255, 184, 77, 0.35); }
+  50%      { border-color: rgba(255, 184, 77, 0.7);  }
+}
 </style>
 </head>
 <body>
@@ -797,6 +837,22 @@
     </div>
     <div class="auth-body">
       <div id="loginForm">
+
+ <!-- ⬇️ ADD THIS BLOCK ⬇️ -->
+  <div class="update-notice">
+    <span class="notice-icon">⚠</span>
+    <div>
+      <strong>Please register again.</strong><br>
+      The website was recently updated, so old accounts no longer work.
+      Please click <span class="notice-link" onclick="setAuthTab('register')">Register</span> above to create a new account.
+    </div>
+  </div>
+  <!-- ⬆️ ADD THIS BLOCK ⬆️ -->
+
+
+
+
+
         <div class="auth-field">
           <label>Email Address</label>
           <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" />
