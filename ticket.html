@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Tickets</title>
+<style>
+  /* Inherits --bg, --panel, --accent, etc. from index.html :root.
+     Fallbacks are declared here so the panel still works if opened standalone. */
+  :root {
+    --bg: #0a0c11; --bg-elev: #0f1218; --panel: #13161e; --panel-2: #171b25;
+    --border: #1f2535; --border-soft: #262d40;
+    --accent: #00d4ff; --accent-dim: #00a8cc;
+    --text: #e6ecf5; --text-soft: #b8c2d4; --muted: #6b7a99;
+    --success: #00e5a0; --danger: #ff4d4d; --warning: #ffb84d;
+  }
+
+  * { box-sizing: border-box; }
+
+  /* ═══ WRAPPER — centered like the generator card ═══ */
+  .tk-wrap {
+    width: 100%;
+    max-width: 900px;      /* matches generator's visual width */
+    margin: 0 auto;         /* centers inside .panel-mount */
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text);
+  }
+
+  /* ═══ TOOLBAR ═══ */
+  .tk-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+  }
+  .tk-filters { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .tk-filter {
+    padding: 0.42rem 0.9rem; border-radius: 100px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem; font-weight: 500; letter-spacing: 0.04em;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .tk-filter:hover { color: var(--text-soft); border-color: var(--border-soft); }
+  .tk-filter.active {
+    background: rgba(0,212,255,0.1);
+    border-color: rgba(0,212,255,0.4);
+    color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(0,212,255,0.15);
+  }
+  .tk-filter .tk-count {
+    margin-left: 0.4rem; opacity: 0.7;
+    font-size: 0.62rem; font-weight: 600;
+  }
+  .tk-filter.active .tk-count { opacity: 1; }
+
+  .tk-search { position: relative; min-width: 240px; }
+  .tk-search input {
+    width: 100%;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.55rem 0.85rem 0.55rem 2rem;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    outline: none; transition: all 0.15s;
+  }
+  .tk-search input::placeholder { color: var(--muted); opacity: 0.65; }
+  .tk-search input:focus {
+    border-color: var(--accent);
+    background: var(--bg);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+  }
+  .tk-search svg {
+    position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px; color: var(--muted);
+    pointer-events: none;
+  }
+
+  /* ═══ STAT STRIP — mirrors .card ═══ */
+  .tk-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+  }
+  .tk-stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.95rem 1.1rem;
+    transition: all 0.15s;
+  }
+  .tk-stat:hover { border-color: var(--border-soft); }
+  .tk-stat .lbl {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.58rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+    font-weight: 600; margin-bottom: 0.45rem;
+  }
+  .tk-stat .val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.45rem; font-weight: 700;
+    color: var(--text); line-height: 1;
+  }
+  .tk-stat.tk-pending .val { color: var(--warning); }
+  .tk-stat.tk-done .val    { color: var(--success); }
+  .tk-stat.tk-skipped .val { color: var(--muted); }
+
+  /* ═══ LIST — uses .card look ═══ */
+  .tk-list {
+    display: flex; flex-direction: column; gap: 0.6rem;
+  }
+
+  .tk-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.15rem;
+    display: flex; align-items: center; gap: 1rem;
+    position: relative; overflow: hidden;
+    transition: all 0.15s;
+  }
+  .tk-card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--warning);
+    transition: background 0.15s;
+  }
+  .tk-card.status-Completed::before { background: var(--success); }
+  .tk-card.status-Skipped::before   { background: var(--muted); }
+  .tk-card:hover {
+    border-color: var(--border-soft);
+    background: var(--panel-2);
+    transform: translateX(2px);
+  }
+
+  .tk-card-main { flex: 1; min-width: 0; }
+
+  .tk-row-1 {
+    display: flex; align-items: center; gap: 0.6rem;
+    margin-bottom: 0.45rem; flex-wrap: wrap;
+  }
+  .tk-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.03em;
+  }
+  .tk-type {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem; font-weight: 600;
+    padding: 0.12rem 0.5rem;
+    border-radius: 100px;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .tk-type.type-Dispute {
+    background: rgba(255,77,77,0.1); color: #ff8a8a;
+    border: 1px solid rgba(255,77,77,0.22);
+  }
+  .tk-type.type-PartnerPortal {
+    background: rgba(0,212,255,0.1); color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.22);
+  }
+  .tk-type.type-Inquiry {
+    background: rgba(124,58,237,0.12); color: #c4b5fd;
+    border: 1px solid rgba(124,58,237,0.25);
+  }
+
+  .tk-title {
+    font-size: 0.85rem; color: var(--text); font-weight: 500;
+    line-height: 1.45; word-break: break-word;
+    margin-bottom: 0.35rem;
+  }
+
+  .tk-meta {
+    display: flex; gap: 0.9rem; flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; color: var(--muted);
+  }
+  .tk-meta span { display: inline-flex; align-items: center; gap: 0.3rem; }
+
+  .tk-status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; font-weight: 600;
+    padding: 0.32rem 0.75rem;
+    border-radius: 100px;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+  }
+  .tk-status .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+  }
+  .tk-status.status-Pending {
+    background: rgba(255,184,77,0.1); color: var(--warning);
+    border: 1px solid rgba(255,184,77,0.25);
+  }
+  .tk-status.status-Pending .dot { animation: tkPulse 1.6s ease-in-out infinite; }
+  .tk-status.status-Completed {
+    background: rgba(0,229,160,0.1); color: var(--success);
+    border: 1px solid rgba(0,229,160,0.25);
+  }
+  .tk-status.status-Skipped {
+    background: rgba(107,122,153,0.12); color: var(--muted);
+    border: 1px solid rgba(107,122,153,0.3);
+  }
+  @keyframes tkPulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  .tk-skip-note {
+    margin-top: 0.55rem;
+    padding: 0.5rem 0.7rem;
+    background: rgba(107,122,153,0.06);
+    border-left: 2px solid var(--muted);
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem; color: var(--text-soft);
+    line-height: 1.55;
+  }
+  .tk-skip-note strong { color: var(--text); font-weight: 600; }
+
+  /* ═══ EMPTY / LOADING ═══ */
+  .tk-empty {
+    background: var(--panel);
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+    padding: 3rem 2rem; text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .tk-empty .big {
+    font-size: 0.88rem; color: var(--text-soft);
+    font-weight: 600; margin-bottom: 0.5rem;
+  }
+  .tk-empty .sub { font-size: 0.72rem; color: var(--muted); line-height: 1.55; }
+
+  .tk-loader {
+    display: flex; align-items: center; justify-content: center;
+    padding: 3rem 1rem; gap: 0.6rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem; color: var(--muted);
+  }
+  .tk-spinner {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    animation: tkSpin 0.75s linear infinite;
+  }
+  @keyframes tkSpin { to { transform: rotate(360deg); } }
+
+  /* ═══ RESPONSIVE ═══ */
+  @media (max-width: 700px) {
+    .tk-stats { grid-template-columns: repeat(2, 1fr); }
+    .tk-search { width: 100%; min-width: 0; }
+    .tk-card { flex-direction: column; align-items: flex-start; gap: 0.7rem; }
+    .tk-status { align-self: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tk-wrap" id="tkWrap">
+
+  <!-- Toolbar -->
+  <div class="tk-toolbar">
+    <div class="tk-filters" id="tkFilters">
+      <button class="tk-filter active" data-filter="all"       onclick="tkSetFilter('all')">All <span class="tk-count" id="cntAll">0</span></button>
+      <button class="tk-filter"        data-filter="Pending"   onclick="tkSetFilter('Pending')">Pending <span class="tk-count" id="cntPending">0</span></button>
+      <button class="tk-filter"        data-filter="Completed" onclick="tkSetFilter('Completed')">Completed <span class="tk-count" id="cntCompleted">0</span></button>
+      <button class="tk-filter"        data-filter="Skipped"   onclick="tkSetFilter('Skipped')">Skipped <span class="tk-count" id="cntSkipped">0</span></button>
+    </div>
+    <div class="tk-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input type="text" id="tkSearch" placeholder="Search tickets by ID or title…" oninput="tkRender()" autocomplete="off"/>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="tk-stats">
+    <div class="tk-stat">
+      <div class="lbl">Total Assigned</div>
+      <div class="val" id="statTotal">—</div>
+    </div>
+    <div class="tk-stat tk-pending">
+      <div class="lbl">Pending</div>
+      <div class="val" id="statPending">—</div>
+    </div>
+    <div class="tk-stat tk-done">
+      <div class="lbl">Completed</div>
+      <div class="val" id="statCompleted">—</div>
+    </div>
+    <div class="tk-stat tk-skipped">
+      <div class="lbl">Skipped</div>
+      <div class="val" id="statSkipped">—</div>
+    </div>
+  </div>
+
+  <!-- List -->
+  <div class="tk-list" id="tkList">
+    <div class="tk-loader"><div class="tk-spinner"></div><span>Loading your tickets…</span></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  let tkFilter = 'all';
+  let tkState = { tickets: [], user: null };
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function typeClass(t) {
+    if (!t) return 'type-Inquiry';
+    return 'type-' + String(t).replace(/\s+/g, '');
+  }
+
+  function formatType(t) { return t || 'Inquiry'; }
+
+  function setStats(list) {
+    const total     = list.length;
+    const pending   = list.filter(x => x.status === 'Pending').length;
+    const completed = list.filter(x => x.status === 'Completed').length;
+    const skipped   = list.filter(x => x.status === 'Skipped').length;
+    document.getElementById('statTotal').textContent     = total;
+    document.getElementById('statPending').textContent   = pending;
+    document.getElementById('statCompleted').textContent = completed;
+    document.getElementById('statSkipped').textContent   = skipped;
+    document.getElementById('cntAll').textContent       = total;
+    document.getElementById('cntPending').textContent   = pending;
+    document.getElementById('cntCompleted').textContent = completed;
+    document.getElementById('cntSkipped').textContent   = skipped;
+  }
+
+  function renderCard(t) {
+    const status = t.status || 'Pending';
+    const type   = t.type   || 'Dispute';
+    const skip   = t.skipReason
+      ? `<div class="tk-skip-note"><strong>Skipped:</strong> ${esc(t.skipReason)}${t.skipNote ? ' — ' + esc(t.skipNote) : ''}</div>`
+      : '';
+    return `<div class="tk-card status-${esc(status)}">
+      <div class="tk-card-main">
+        <div class="tk-row-1">
+          <span class="tk-id">${esc(t.id || '—')}</span>
+          <span class="tk-type ${typeClass(type)}">${esc(formatType(type))}</span>
+        </div>
+        <div class="tk-title">${esc(t.title || '(no title)')}</div>
+        <div class="tk-meta">
+          <span>📅 ${esc(t.date || '—')}</span>
+          <span>🕐 ${esc(t.time || '—')}</span>
+          ${t.assignee ? `<span>👤 ${esc(t.assignee)}</span>` : ''}
+        </div>
+        ${skip}
+      </div>
+      <span class="tk-status status-${esc(status)}">
+        <span class="dot"></span>${esc(status)}
+      </span>
+    </div>`;
+  }
+
+  function tkRender() {
+    const list = tkState.tickets;
+    setStats(list);
+
+    const q = (document.getElementById('tkSearch').value || '').trim().toLowerCase();
+    let filtered = list;
+    if (tkFilter !== 'all') filtered = filtered.filter(t => t.status === tkFilter);
+    if (q) {
+      filtered = filtered.filter(t =>
+        (t.id || '').toLowerCase().includes(q) ||
+        (t.title || '').toLowerCase().includes(q) ||
+        (t.type || '').toLowerCase().includes(q) ||
+        (t.assignee || '').toLowerCase().includes(q)
+      );
+    }
+
+    const listEl = document.getElementById('tkList');
+
+    if (!list.length) {
+      listEl.innerHTML = `<div class="tk-empty">
+        <div class="big">No tickets assigned to you yet</div>
+        <div class="sub">Generate a dispute file from the Generate panel<br>and it will appear here automatically.</div>
+      </div>`;
+      return;
+    }
+
+    if (!filtered.length) {
+      listEl.innerHTML = `<div class="tk-empty">
+        <div class="big">No matching tickets</div>
+        <div class="sub">Try a different filter or search term.</div>
+      </div>`;
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(renderCard).join('');
+  }
+
+  function tkSetFilter(f) {
+    tkFilter = f;
+    document.querySelectorAll('.tk-filter').forEach(b => {
+      b.classList.toggle('active', b.dataset.filter === f);
+    });
+    tkRender();
+  }
+
+  function readState() {
+    const app = window.DISPUTES_APP;
+    if (!app) return { tickets: [], user: null };
+    return {
+      tickets: app.getMyTickets ? app.getMyTickets() : [],
+      user: app.getCurrentUser ? app.getCurrentUser() : null
+    };
+  }
+
+  function refresh() {
+    tkState = readState();
+    tkRender();
+  }
+
+  window.onMyTicketsUpdated = function () { refresh(); };
+  window.panelReady_tickets = function () { refresh(); };
+  window.tkSetFilter = tkSetFilter;
+
+  refresh();
+})();
+</script>
+
+</body>
+</html>
