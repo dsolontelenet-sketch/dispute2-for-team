@@ -428,7 +428,7 @@
 
   /* ═══ TICKETS PANEL ═══ */
   .tk-wrap {
-    width: 100%; max-width: 900px; margin: 0 auto;
+    width: 100%; max-width: 1100px; margin: 0 auto;
     display: flex; flex-direction: column; gap: 1.25rem;
   }
   .tk-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
@@ -465,36 +465,86 @@
   .tk-stat.tk-pending .val { color: var(--warning); }
   .tk-stat.tk-done .val    { color: var(--success); }
   .tk-stat.tk-skipped .val { color: var(--muted); }
-  .tk-list { display: flex; flex-direction: column; gap: 0.6rem; }
-  .tk-card {
+
+  /* ═══ TABLE ═══ */
+  .tk-table-wrap {
     background: var(--panel); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1rem 1.15rem;
-    display: flex; align-items: center; gap: 1rem;
-    position: relative; overflow: hidden; transition: all 0.15s;
+    border-radius: 14px; overflow: hidden;
   }
-  .tk-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--warning); transition: background 0.15s; }
-  .tk-card.status-Completed::before { background: var(--success); }
-  .tk-card.status-Skipped::before   { background: var(--muted); }
-  .tk-card:hover { border-color: var(--border-soft); background: var(--panel-2); transform: translateX(2px); }
-  .tk-card-main { flex: 1; min-width: 0; }
-  .tk-row-1 { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.45rem; flex-wrap: wrap; }
-  .tk-id { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 600; color: var(--accent); letter-spacing: 0.03em; }
-  .tk-type { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; font-weight: 600; padding: 0.12rem 0.5rem; border-radius: 100px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .tk-table {
+    width: 100%; border-collapse: collapse;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.82rem;
+  }
+  .tk-table thead th {
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.85rem 1rem;
+    text-align: left; white-space: nowrap;
+    position: sticky; top: 0;
+  }
+  .tk-table thead th.th-sortable { cursor: pointer; user-select: none; transition: color 0.15s; }
+  .tk-table thead th.th-sortable:hover { color: var(--text-soft); }
+  .tk-table thead th .sort-ind { margin-left: 0.35rem; opacity: 0.55; font-size: 0.55rem; }
+  .tk-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    position: relative;
+  }
+  .tk-table tbody tr:last-child { border-bottom: none; }
+  .tk-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .tk-table tbody tr.row-Pending    td:first-child { box-shadow: inset 3px 0 0 var(--warning); }
+  .tk-table tbody tr.row-Completed  td:first-child { box-shadow: inset 3px 0 0 var(--success); }
+  .tk-table tbody tr.row-Skipped    td:first-child { box-shadow: inset 3px 0 0 var(--muted); }
+  .tk-table td {
+    padding: 0.85rem 1rem;
+    vertical-align: top;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .tk-table td.td-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.74rem; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .tk-table td.td-title { min-width: 240px; max-width: 480px; }
+  .tk-table td.td-title .tk-title-text { word-break: break-word; color: var(--text); font-weight: 500; }
+  .tk-table td.td-title .tk-skip-note {
+    margin-top: 0.5rem; padding: 0.45rem 0.65rem;
+    background: rgba(107,122,153,0.08);
+    border-left: 2px solid var(--muted);
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; color: var(--text-soft); line-height: 1.5;
+  }
+  .tk-table td.td-title .tk-skip-note strong { color: var(--text); font-weight: 600; }
+  .tk-table td.td-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem; color: var(--muted);
+    white-space: nowrap;
+  }
+  .tk-table td.td-meta .meta-line { display: block; }
+  .tk-table td.td-type { white-space: nowrap; }
+  .tk-table td.td-status { white-space: nowrap; }
+
+  .tk-type { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; font-weight: 600; padding: 0.12rem 0.5rem; border-radius: 100px; letter-spacing: 0.06em; text-transform: uppercase; display: inline-block; }
   .tk-type.type-Dispute { background: rgba(255,77,77,0.1); color: #ff8a8a; border: 1px solid rgba(255,77,77,0.22); }
   .tk-type.type-PartnerPortal { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.22); }
   .tk-type.type-Inquiry { background: rgba(124,58,237,0.12); color: #c4b5fd; border: 1px solid rgba(124,58,237,0.25); }
-  .tk-title { font-size: 0.85rem; color: var(--text); font-weight: 500; line-height: 1.45; word-break: break-word; margin-bottom: 0.35rem; }
-  .tk-meta { display: flex; gap: 0.9rem; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; color: var(--muted); }
-  .tk-meta span { display: inline-flex; align-items: center; gap: 0.3rem; }
-  .tk-status { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; font-weight: 600; padding: 0.32rem 0.75rem; border-radius: 100px; letter-spacing: 0.05em; text-transform: uppercase; flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.4rem; }
+
+  .tk-status { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; font-weight: 600; padding: 0.32rem 0.75rem; border-radius: 100px; letter-spacing: 0.05em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 0.4rem; }
   .tk-status .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .tk-status.status-Pending { background: rgba(255,184,77,0.1); color: var(--warning); border: 1px solid rgba(255,184,77,0.25); }
   .tk-status.status-Pending .dot { animation: tkPulse 1.6s ease-in-out infinite; }
   .tk-status.status-Completed { background: rgba(0,229,160,0.1); color: var(--success); border: 1px solid rgba(0,229,160,0.25); }
   .tk-status.status-Skipped { background: rgba(107,122,153,0.12); color: var(--muted); border: 1px solid rgba(107,122,153,0.3); }
   @keyframes tkPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-  .tk-skip-note { margin-top: 0.55rem; padding: 0.5rem 0.7rem; background: rgba(107,122,153,0.06); border-left: 2px solid var(--muted); border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--text-soft); line-height: 1.55; }
-  .tk-skip-note strong { color: var(--text); font-weight: 600; }
+
   .tk-empty { background: var(--panel); border: 1px dashed var(--border); border-radius: 14px; padding: 3rem 2rem; text-align: center; font-family: 'IBM Plex Mono', monospace; }
   .tk-empty .big { font-size: 0.88rem; color: var(--text-soft); font-weight: 600; margin-bottom: 0.5rem; }
   .tk-empty .sub { font-size: 0.72rem; color: var(--muted); line-height: 1.55; }
@@ -720,9 +770,14 @@
     #panel-dashboard, #panel-dashboard.has-wiki { max-width: 100%; grid-template-columns: minmax(0, 1fr); }
     .tk-stats { grid-template-columns: repeat(2, 1fr); }
     .tk-search { width: 100%; min-width: 0; }
-    .tk-card { flex-direction: column; align-items: flex-start; gap: 0.7rem; }
-    .tk-status { align-self: flex-start; }
     .set-row { flex-wrap: wrap; }
+    /* Table responsive: hide date/time columns on mobile */
+    .tk-table thead th.col-date,
+    .tk-table thead th.col-time { display: none; }
+    .tk-table tbody td.td-date,
+    .tk-table tbody td.td-time { display: none; }
+    .tk-table thead th, .tk-table td { padding: 0.65rem 0.7rem; }
+    .tk-table td.td-title { min-width: 0; }
   }
 </style>
 </head>
@@ -1075,7 +1130,7 @@
         </div>
       </div>
 
-      <!-- ═════════ MY TICKETS PANEL ═════════ -->
+      <!-- ═════════ MY TICKETS PANEL (TABLE) ═════════ -->
       <div id="panel-tickets" class="hidden" style="width:100%;">
         <div class="tk-wrap">
           <div class="tk-toolbar">
@@ -1100,7 +1155,7 @@
             <div class="tk-stat tk-skipped"><div class="lbl">Skipped</div><div class="val" id="statSkipped">—</div></div>
           </div>
 
-          <div class="tk-list" id="tkList">
+          <div id="tkTableContainer">
             <div class="tk-loader"><div class="spinner"></div><span>Loading your tickets…</span></div>
           </div>
         </div>
@@ -1314,7 +1369,6 @@ const monRotationRef = monitoringRtdb.ref('meta/rotation');
 const monProfilesRef = monitoringRtdb.ref('profiles');
 const monPhotosRef   = monitoringRtdb.ref('profiles/photos');
 
-// Firestore tickets from Monitoring (old tickets) — READ ONLY
 const monFirestore         = monitoringApp.firestore();
 const monFirestoreTickets  = monFirestore.collection('tickets');
 
@@ -1949,9 +2003,10 @@ function switchPanel(name) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TICKETS PANEL LOGIC
+   TICKETS PANEL LOGIC (TABLE)
    ═══════════════════════════════════════════════════════════════ */
 let tkFilter = 'all';
+let tkSort = { key: 'ts', dir: 'desc' };
 
 function tkEsc(s) {
   const d = document.createElement('div');
@@ -1977,27 +2032,82 @@ function tkSetStats(list) {
   if (g('cntSkipped'))    g('cntSkipped').textContent    = skipped;
 }
 
-function tkRenderCard(t) {
+function tkSortIndicator(key) {
+  if (tkSort.key !== key) return `<span class="sort-ind">↕</span>`;
+  return `<span class="sort-ind">${tkSort.dir === 'asc' ? '▲' : '▼'}</span>`;
+}
+
+function tkApplySort(list) {
+  const { key, dir } = tkSort;
+  const mult = dir === 'asc' ? 1 : -1;
+  return [...list].sort((a, b) => {
+    let av, bv;
+    if (key === 'ts') { av = a.ts || 0; bv = b.ts || 0; return (av - bv) * mult; }
+    av = String(a[key] || '').toLowerCase();
+    bv = String(b[key] || '').toLowerCase();
+    if (av < bv) return -1 * mult;
+    if (av > bv) return 1 * mult;
+    return 0;
+  });
+}
+
+function tkSetSort(key) {
+  if (tkSort.key === key) {
+    tkSort.dir = tkSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    tkSort.key = key;
+    tkSort.dir = key === 'ts' ? 'desc' : 'asc';
+  }
+  tkRender();
+}
+window.tkSetSort = tkSetSort;
+
+function tkRenderRow(t) {
   const status = t.status || 'Pending';
   const type   = t.type   || 'Dispute';
   const skip   = t.skipReason
     ? `<div class="tk-skip-note"><strong>Skipped:</strong> ${tkEsc(t.skipReason)}${t.skipNote ? ' — ' + tkEsc(t.skipNote) : ''}</div>`
     : '';
-  return `<div class="tk-card status-${tkEsc(status)}">
-    <div class="tk-card-main">
-      <div class="tk-row-1">
-        <span class="tk-id">${tkEsc(t.id || '—')}</span>
-        <span class="tk-type ${tkTypeClass(type)}">${tkEsc(tkFormatType(type))}</span>
-      </div>
-      <div class="tk-title">${tkEsc(t.title || '(no title)')}</div>
-      <div class="tk-meta">
-        <span>📅 ${tkEsc(t.date || '—')}</span>
-        <span>🕐 ${tkEsc(t.time || '—')}</span>
-        ${t.assignee ? `<span>👤 ${tkEsc(t.assignee)}</span>` : ''}
-      </div>
+  return `<tr class="row-${tkEsc(status)}">
+    <td class="td-id">${tkEsc(t.id || '—')}</td>
+    <td class="td-type"><span class="tk-type ${tkTypeClass(type)}">${tkEsc(tkFormatType(type))}</span></td>
+    <td class="td-title">
+      <div class="tk-title-text">${tkEsc(t.title || '(no title)')}</div>
       ${skip}
-    </div>
-    <span class="tk-status status-${tkEsc(status)}"><span class="dot"></span>${tkEsc(status)}</span>
+    </td>
+    <td class="td-meta td-date">
+      <span class="meta-line">${tkEsc(t.date || '—')}</span>
+    </td>
+    <td class="td-meta td-time">
+      <span class="meta-line">${tkEsc(t.time || '—')}</span>
+    </td>
+    <td class="td-meta">
+      <span class="meta-line">${t.assignee ? tkEsc(t.assignee) : '—'}</span>
+    </td>
+    <td class="td-status">
+      <span class="tk-status status-${tkEsc(status)}"><span class="dot"></span>${tkEsc(status)}</span>
+    </td>
+  </tr>`;
+}
+
+function tkRenderTable(list) {
+  return `<div class="tk-table-wrap">
+    <table class="tk-table">
+      <thead>
+        <tr>
+          <th class="th-sortable" onclick="tkSetSort('id')">Ticket ID ${tkSortIndicator('id')}</th>
+          <th class="th-sortable" onclick="tkSetSort('type')">Type ${tkSortIndicator('type')}</th>
+          <th class="th-sortable" onclick="tkSetSort('title')">Title ${tkSortIndicator('title')}</th>
+          <th class="th-sortable col-date" onclick="tkSetSort('date')">Date ${tkSortIndicator('date')}</th>
+          <th class="th-sortable col-time" onclick="tkSetSort('time')">Time ${tkSortIndicator('time')}</th>
+          <th class="th-sortable" onclick="tkSetSort('assignee')">Assignee ${tkSortIndicator('assignee')}</th>
+          <th class="th-sortable" onclick="tkSetSort('status')">Status ${tkSortIndicator('status')}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map(tkRenderRow).join('')}
+      </tbody>
+    </table>
   </div>`;
 }
 
@@ -2006,8 +2116,10 @@ function tkRender() {
   tkSetStats(list);
 
   const searchEl = document.getElementById('tkSearch');
-  if (!searchEl) return;
-  const q = (searchEl.value || '').trim().toLowerCase();
+  const container = document.getElementById('tkTableContainer');
+  if (!container) return;
+
+  const q = searchEl ? (searchEl.value || '').trim().toLowerCase() : '';
   let filtered = list;
   if (tkFilter !== 'all') filtered = filtered.filter(t => t.status === tkFilter);
   if (q) {
@@ -2019,11 +2131,8 @@ function tkRender() {
     );
   }
 
-  const listEl = document.getElementById('tkList');
-  if (!listEl) return;
-
   if (!list.length) {
-    listEl.innerHTML = `<div class="tk-empty">
+    container.innerHTML = `<div class="tk-empty">
       <div class="big">No tickets assigned to you yet</div>
       <div class="sub">Generate a dispute file from the Generate panel<br>and it will appear here automatically.</div>
     </div>`;
@@ -2031,14 +2140,15 @@ function tkRender() {
   }
 
   if (!filtered.length) {
-    listEl.innerHTML = `<div class="tk-empty">
+    container.innerHTML = `<div class="tk-empty">
       <div class="big">No matching tickets</div>
       <div class="sub">Try a different filter or search term.</div>
     </div>`;
     return;
   }
 
-  listEl.innerHTML = filtered.map(tkRenderCard).join('');
+  const sorted = tkApplySort(filtered);
+  container.innerHTML = tkRenderTable(sorted);
 }
 window.tkRender = tkRender;
 
@@ -2731,13 +2841,11 @@ function todayKey() {
 async function pushTicketToMonitoring(title, type) {
   if (!title || !CURRENT_USER) return null;
   try {
-    // 1. Sequence
     const seqSnap = await monSeqRef.once('value');
     const seq = seqSnap.val() || 0;
     const nextSeq = seq + 1;
     const ticketId = 'TKT-' + String(nextSeq).padStart(4, '0');
 
-    // 2. Read latest rotation
     const rotSnap = await monRotationRef.once('value');
     const rotData = rotSnap.val() || {};
     const wt = Array.isArray(rotData.workingToday) ? rotData.workingToday.slice() : [];
@@ -2763,7 +2871,6 @@ async function pushTicketToMonitoring(title, type) {
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const ts = Date.now();
 
-    // 3. Push ticket
     await monTicketsRef.push({
       id: ticketId,
       seqNum: nextSeq,
@@ -2778,7 +2885,6 @@ async function pushTicketToMonitoring(title, type) {
       usedRotationTurn: advanced
     });
 
-    // 4. Bump seq + advance rotation
     await monSeqRef.set(nextSeq);
     if (advanced) {
       await monRotationRef.update({ rotationIndex: rotIdx });
@@ -2835,13 +2941,11 @@ async function generate() {
   document.getElementById('genConfirmAssignee').textContent = getCpName();
   document.getElementById('genConfirmUrls').textContent = `${rows.length} URL${rows.length === 1 ? '' : 's'}`;
 
-  // Reset dup alert
   const dupAlert = document.getElementById('genDupAlert');
   const dupText  = document.getElementById('genDupText');
   dupAlert.classList.add('hidden');
   dupText.textContent = '—';
 
-  // Rotation info
   const rotInfo = document.getElementById('genRotInfo');
   const rotIcon = document.getElementById('genRotIcon');
   const rotText = document.getElementById('genRotText');
@@ -2869,7 +2973,6 @@ async function generate() {
 
   document.getElementById('genConfirmOverlay').classList.remove('hidden');
 
-  // Checkpoint duplicate check
   if (v === 'checkpoint') {
     const ts = document.getElementById('accepted').value.trim();
     if (ts) {
@@ -2900,7 +3003,6 @@ async function confirmGenerate() {
 
   const v = document.getElementById('vendor').value;
 
-  // Checkpoint duplicate re-check before pushing
   if (v === 'checkpoint') {
     const ts = document.getElementById('accepted').value.trim();
     if (ts) {
@@ -2917,7 +3019,6 @@ async function confirmGenerate() {
     }
   }
 
-  // Build & download Excel
   const wb = XLSX.utils.book_new();
   const wsData = rows.map(({ url, cat, sec, secCat }) => {
     const hasSecurityCat = secCat !== null && secCat !== undefined && secCat !== '';
@@ -2934,7 +3035,6 @@ async function confirmGenerate() {
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   XLSX.writeFile(wb, fn + '.xlsx');
 
-  // Push ticket (and advance rotation if it's our turn)
   const pushed = await pushTicketToMonitoring(fn, 'Dispute');
   if (pushed) {
     console.log('✅ Ticket pushed:', pushed.ticketId, '| type:', pushed.type, '| rotation advanced:', pushed.advanced);
