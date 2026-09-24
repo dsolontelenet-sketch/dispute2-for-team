@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Console — Disputes Generator</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23ff4d4d'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='Georgia,serif' font-weight='700' font-size='40' fill='white'>A</text></svg>">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0a0c11; --bg-elev: #0f1218; --panel: #13161e; --panel-2: #171b25;
+    --border: #1f2535; --border-soft: #262d40;
+    --accent: #ff4d4d; --accent-dim: #cc3d3d;
+    --text: #e6ecf5; --text-soft: #b8c2d4; --muted: #6b7a99;
+    --success: #00e5a0; --warning: #ffb84d; --info: #00d4ff;
+    --sidebar-w: 232px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,77,77,0.08), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 100%, rgba(124,58,237,0.05), transparent 60%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh; line-height: 1.5;
+  }
+  .hidden { display: none !important; }
+
+  /* AUTH */
+  .auth-screen { width: 100%; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+  .auth-shell {
+    width: 100%; max-width: 440px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px; box-shadow: 0 32px 100px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  .auth-brand {
+    padding: 2rem 2rem 1.5rem; text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,77,77,0.04), transparent);
+  }
+  .auth-brand .logo {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700;
+    font-size: 1.5rem; color: #0a0c11; margin-bottom: 0.85rem;
+    box-shadow: 0 8px 24px rgba(255,77,77,0.25);
+  }
+  .auth-brand h1 { font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem; color: var(--text); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; margin-bottom: 0.35rem; }
+  .auth-brand p { font-size: 0.76rem; color: var(--muted); }
+  .auth-body { padding: 1.75rem 2rem 2rem; }
+  .auth-field { margin-bottom: 1rem; }
+  .auth-field label {
+    display: block; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.42rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .auth-field input {
+    width: 100%; background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 9px; padding: 0.75rem 0.95rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.84rem;
+    outline: none; transition: all 0.15s;
+  }
+  .auth-field input:focus { border-color: var(--accent); background: var(--bg); box-shadow: 0 0 0 3px rgba(255,77,77,0.08); }
+  .auth-submit {
+    width: 100%; margin-top: 0.75rem; padding: 0.88rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    border: none; border-radius: 10px; color: #0a0c11;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 0.82rem;
+    letter-spacing: 0.08em; cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+  }
+  .auth-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(255,77,77,0.32); }
+  .auth-submit:disabled { background: var(--panel-2); color: var(--muted); cursor: not-allowed; }
+  .auth-msg { display: none; margin-top: 1rem; padding: 0.75rem 0.95rem; border-radius: 9px; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; line-height: 1.55; }
+  .auth-msg.visible { display: block; }
+  .auth-msg.error { background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.28); color: #ff8a8a; }
+  .auth-msg.ok { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.28); color: var(--success); }
+  .auth-warning {
+    display: flex; align-items: flex-start; gap: 0.6rem;
+    background: rgba(255,184,77,0.08);
+    border: 1px solid rgba(255,184,77,0.35);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 1.25rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem; line-height: 1.55;
+    color: var(--warning);
+  }
+  .auth-warning .icon { flex-shrink: 0; font-size: 0.95rem; }
+  .auth-warning strong { color: #ffd699; }
+
+  /* APP */
+  .app-shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; width: 100%; }
+  .sidebar {
+    background: var(--panel); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 1.15rem 0.75rem; gap: 0.75rem;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .sidebar-brand { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.75rem 1rem; border-bottom: 1px solid var(--border); margin-bottom: 0.5rem; }
+  .sidebar-brand .b-logo {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700;
+    font-size: 0.95rem; color: #0a0c11; flex-shrink: 0;
+  }
+  .sidebar-brand .b-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); line-height: 1.1; }
+  .sidebar-brand .b-sub { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 0.15rem; }
+  .nav-group { display: flex; flex-direction: column; gap: 0.2rem; }
+  .nav-group-title { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); padding: 0.65rem 0.75rem 0.35rem; font-weight: 600; }
+  .nav-btn {
+    display: flex; align-items: center; gap: 0.7rem; padding: 0.62rem 0.75rem;
+    border-radius: 9px; background: transparent; border: 1px solid transparent;
+    color: var(--text-soft); font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    text-align: left; width: 100%;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+  .nav-btn.active { background: rgba(255,77,77,0.08); border-color: rgba(255,77,77,0.22); color: var(--accent); }
+  .nav-btn .nav-ico { width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .nav-btn .nav-ico svg { width: 16px; height: 16px; }
+  .nav-btn .nav-badge {
+    margin-left: auto; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem; padding: 0.1rem 0.4rem; border-radius: 100px;
+    background: rgba(255,77,77,0.12); color: var(--accent); font-weight: 600;
+  }
+  .sidebar-footer { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.5rem; }
+  .user-chip {
+    display: flex; align-items: center; gap: 0.55rem;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.5rem 0.6rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+  }
+  .user-chip .avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-dim)); color: #0a0c11; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.65rem; flex-shrink: 0; overflow: hidden; }
+  .user-chip .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .user-chip .u-meta { min-width: 0; flex: 1; }
+  .user-chip .uname { color: var(--text); font-weight: 600; font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-chip .urole { color: var(--muted); font-size: 0.6rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem; }
+  .logout-btn {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.5rem 0.65rem; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+    cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em; text-align: center;
+  }
+  .logout-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(255,77,77,0.06); }
+
+  .main-area { display: flex; flex-direction: column; min-width: 0; width: 100%; }
+  .main-header {
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(10,12,17,0.88);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.75rem;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+  }
+  .main-header h1 { font-family: 'IBM Plex Mono', monospace; font-size: 0.92rem; font-weight: 600; color: var(--text); letter-spacing: 0.06em; text-transform: uppercase; }
+  .main-header .page-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+
+  .panel-mount { padding: 1.75rem; display: flex; flex-direction: column; gap: 1.25rem; width: 100%; align-items: center; }
+  .panel-inner { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.15rem; }
+  .stat-card .lbl { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 0.4rem; }
+  .stat-card .val { font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-card.accent .val { color: var(--accent); }
+  .stat-card.success .val { color: var(--success); }
+  .stat-card.warning .val { color: var(--warning); }
+
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .search-wrap { position: relative; min-width: 280px; flex: 1; max-width: 480px; }
+  .search-wrap input {
+    width: 100%; background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.55rem 0.85rem 0.55rem 2rem;
+    color: var(--text); font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem; outline: none; transition: all 0.15s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); background: var(--bg); box-shadow: 0 0 0 3px rgba(255,77,77,0.08); }
+  .search-wrap svg { position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--muted); pointer-events: none; }
+  .refresh-btn {
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.55rem 1rem;
+    color: var(--text-soft); font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; cursor: pointer; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+  }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .users-table-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .users-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .users-table thead th {
+    background: var(--bg-elev); border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); padding: 0.85rem 1rem;
+    text-align: left; white-space: nowrap;
+    position: sticky; top: 0;
+  }
+  .users-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  .users-table tbody tr:last-child { border-bottom: none; }
+  .users-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .users-table td { padding: 0.85rem 1rem; vertical-align: middle; color: var(--text); }
+  .users-table td.td-name { font-weight: 500; }
+  .users-table td.td-mono { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--text-soft); }
+  .users-table td.td-uid { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .users-table td.td-actions { white-space: nowrap; text-align: right; }
+
+  .agent-pill {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
+    background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.25);
+    color: var(--info); border-radius: 100px; padding: 0.15rem 0.6rem 0.15rem 0.15rem;
+    font-weight: 500;
+  }
+  .agent-pill .pill-ava {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--info), #0088aa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; color: #0a0c11; font-weight: 700;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .agent-pill .pill-ava img { width: 100%; height: 100%; object-fit: cover; }
+  .agent-pill.unclaimed { background: rgba(107,122,153,0.12); border-color: rgba(107,122,153,0.3); color: var(--muted); padding-left: 0.6rem; }
+
+  .action-btn {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 7px; padding: 0.4rem 0.7rem;
+    color: var(--text-soft); font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; font-weight: 500; cursor: pointer;
+    transition: all 0.15s; letter-spacing: 0.03em;
+    margin-left: 0.3rem;
+  }
+  .action-btn:hover { border-color: var(--info); color: var(--info); background: rgba(0,212,255,0.06); }
+  .action-btn.warn:hover { border-color: var(--warning); color: var(--warning); background: rgba(255,184,77,0.06); }
+  .action-btn.danger:hover { border-color: var(--accent); color: var(--accent); background: rgba(255,77,77,0.06); }
+
+  .empty-state { background: var(--panel); border: 1px dashed var(--border); border-radius: 14px; padding: 3rem 2rem; text-align: center; font-family: 'IBM Plex Mono', monospace; }
+  .empty-state .big { font-size: 0.88rem; color: var(--text-soft); font-weight: 600; margin-bottom: 0.5rem; }
+  .empty-state .sub { font-size: 0.72rem; color: var(--muted); line-height: 1.55; }
+  .loader { display: flex; align-items: center; justify-content: center; padding: 3rem 1rem; gap: 0.6rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+  .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--accent); animation: spin 0.75s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(5,6,10,0.85); display: flex; align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(6px); padding: 1.5rem; overflow-y: auto; }
+  .modal-overlay.hidden { display: none; }
+  .modal-card { width: 100%; max-width: 480px; background: var(--panel); border: 1px solid var(--border-soft); border-radius: 16px; padding: 1.75rem; box-shadow: 0 24px 80px rgba(0,0,0,0.6); margin: auto; }
+  .modal-card.lg { max-width: 640px; }
+  .modal-card h3 { font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; color: var(--text); margin-bottom: 0.35rem; font-weight: 600; }
+  .modal-card .sub { font-size: 0.74rem; color: var(--muted); line-height: 1.55; margin-bottom: 1.25rem; }
+  .modal-field { margin-bottom: 1rem; }
+  .modal-field label {
+    display: block; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .modal-field input, .modal-field select {
+    width: 100%; background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 9px; padding: 0.7rem 0.95rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;
+    outline: none; transition: all 0.15s;
+  }
+  .modal-field input:focus, .modal-field select:focus { border-color: var(--accent); background: var(--bg); }
+  .modal-actions { display: flex; gap: 0.6rem; margin-top: 1.25rem; }
+  .modal-btn { flex: 1; padding: 0.72rem; border-radius: 9px; font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; font-weight: 600; cursor: pointer; transition: all 0.15s; border: 1px solid var(--border); letter-spacing: 0.04em; }
+  .modal-btn.cancel { background: transparent; color: var(--muted); }
+  .modal-btn.cancel:hover { border-color: var(--text-soft); color: var(--text-soft); }
+  .modal-btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-dim)); color: #0a0c11; border-color: transparent; }
+  .modal-btn.primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,77,77,0.3); }
+  .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .modal-info { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; line-height: 1.7; }
+  .modal-info .row { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+  .modal-info .lbl { color: var(--muted); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; flex-shrink: 0; }
+  .modal-info .val { color: var(--text); text-align: right; word-break: break-word; font-weight: 500; }
+  .modal-msg { display: none; margin-top: 1rem; padding: 0.7rem 0.9rem; border-radius: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; line-height: 1.55; white-space: pre-wrap; }
+  .modal-msg.visible { display: block; }
+  .modal-msg.error { background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.28); color: #ff8a8a; }
+  .modal-msg.ok { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.28); color: var(--success); }
+  .modal-msg.info { background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.22); color: var(--info); }
+
+  .modal-notice {
+    font-size: 0.72rem; color: var(--text-soft);
+    font-family: 'IBM Plex Mono', monospace; line-height: 1.6;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 9px; padding: 0.75rem 0.95rem;
+  }
+  .modal-notice strong { color: var(--success); font-weight: 700; }
+  .modal-notice.warn { background: rgba(255,184,77,0.06); border-color: rgba(255,184,77,0.3); color: var(--warning); }
+  .modal-notice.warn strong { color: #ffd699; }
+
+  /* PWD MODE TOGGLE */
+  .mode-toggle { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
+  .mode-btn {
+    flex: 1; padding: 0.6rem 0.5rem;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 9px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    font-weight: 500; cursor: pointer; transition: all 0.15s;
+  }
+  .mode-btn:hover { color: var(--text-soft); border-color: var(--border-soft); }
+  .mode-btn.active { background: rgba(255,77,77,0.08); border-color: rgba(255,77,77,0.4); color: var(--accent); }
+
+  /* AGENT PICKER */
+  .agent-picker-search {
+    width: 100%; background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 9px; padding: 0.7rem 0.95rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;
+    outline: none; margin-bottom: 0.85rem; transition: all 0.15s;
+  }
+  .agent-picker-search:focus { border-color: var(--accent); background: var(--bg); }
+  .agent-picker-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.5rem; max-height: 360px; overflow-y: auto;
+    padding: 0.25rem; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--bg-elev);
+  }
+  .agent-picker-grid::-webkit-scrollbar { width: 8px; }
+  .agent-picker-grid::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 4px; }
+  .agent-item {
+    display: flex; align-items: center; gap: 0.6rem;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.6rem 0.75rem;
+    cursor: pointer; transition: all 0.15s;
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: left; width: 100%;
+    position: relative;
+  }
+  .agent-item:hover { border-color: var(--accent); background: rgba(255,77,77,0.05); transform: translateY(-1px); }
+  .agent-item.selected { border-color: var(--accent); background: rgba(255,77,77,0.1); box-shadow: 0 0 0 1px var(--accent); }
+  .agent-item.taken { cursor: not-allowed; opacity: 0.55; background: rgba(255,77,77,0.03); border-color: rgba(255,77,77,0.25); }
+  .agent-item.taken:hover { border-color: rgba(255,77,77,0.5); background: rgba(255,77,77,0.06); transform: none; }
+  .agent-item .ava {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.72rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    color: #0a0c11; overflow: hidden;
+  }
+  .agent-item .ava img { width: 100%; height: 100%; object-fit: cover; }
+  .agent-item .info { min-width: 0; flex: 1; }
+  .agent-item .nm { color: var(--text); font-weight: 600; font-size: 0.74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .agent-item .rl { color: var(--muted); font-size: 0.62rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.1rem; }
+  .agent-item .tick { position: absolute; top: 0.35rem; right: 0.4rem; color: var(--accent); font-weight: 700; font-size: 0.75rem; opacity: 0; }
+  .agent-item.selected .tick { opacity: 1; }
+  .agent-item .lock-badge { position: absolute; top: 0.3rem; right: 0.4rem; font-size: 0.7rem; color: var(--accent); }
+  .agent-picker-empty {
+    padding: 2rem 1rem; text-align: center;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    color: var(--muted); line-height: 1.6;
+  }
+
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 2000;
+    background: var(--panel-2); border: 1px solid var(--border-soft);
+    border-radius: 10px; padding: 0.85rem 1.1rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem;
+    color: var(--text); box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    display: flex; align-items: center; gap: 0.6rem;
+    transform: translateY(150%); transition: transform 0.3s ease;
+    max-width: 380px;
+  }
+  .toast.show { transform: translateY(0); }
+  .toast.ok { border-color: rgba(0,229,160,0.4); }
+  .toast.ok .icon { color: var(--success); }
+  .toast.error { border-color: rgba(255,77,77,0.4); }
+  .toast.error .icon { color: var(--accent); }
+
+  @media (max-width: 900px) {
+    .app-shell { grid-template-columns: 1fr; }
+    .sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 260px; z-index: 40; transform: translateX(-100%); transition: transform 0.25s ease; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+    .sidebar.open { transform: translateX(0); }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .panel-mount { padding: 1rem; }
+    .users-table thead th.col-uid, .users-table tbody td.td-uid { display: none; }
+    .users-table thead th.col-created, .users-table tbody td.td-created { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-shell">
+    <div class="auth-brand">
+      <div class="logo">A</div>
+      <h1>Admin Console</h1>
+      <p>Disputes File Generator — restricted access</p>
+    </div>
+    <div class="auth-body">
+      <div class="auth-warning">
+        <span class="icon">🔒</span>
+        <div><strong>Admins only.</strong> This panel manages user accounts, agent claims, and account recovery.</div>
+      </div>
+      <div class="auth-field">
+        <label>Admin Email</label>
+        <input type="email" id="adminEmail" placeholder="admin@example.com" autocomplete="email" />
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input type="password" id="adminPassword" placeholder="Enter admin password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()" />
+      </div>
+      <button class="auth-submit" id="loginBtn" onclick="doLogin()">Sign In</button>
+      <div class="auth-msg" id="authMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="hidden" id="loadingScreen" style="min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:0.7rem; color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:0.82rem;">
+  <div class="spinner"></div>
+  <span>Verifying admin session…</span>
+</div>
+
+<!-- MAIN APP -->
+<div class="app-shell hidden" id="mainApp">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="b-logo">A</div>
+      <div>
+        <div class="b-title">Admin</div>
+        <div class="b-sub">Console</div>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">Manage</div>
+      <button class="nav-btn active" id="nav-users" onclick="switchPanel('users')">
+        <span class="nav-ico"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg></span>
+        <span>Users</span>
+        <span class="nav-badge" id="usersNavBadge">—</span>
+      </button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <span class="avatar" id="adminAvatar">A</span>
+        <div class="u-meta">
+          <div class="uname" id="adminName">Admin</div>
+          <div class="urole" id="adminEmailChip">—</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main-area">
+    <header class="main-header">
+      <div>
+        <h1 id="pageTitle">Users</h1>
+        <div class="page-sub" id="pageSub">Manage registered accounts, agents & credentials</div>
+      </div>
+    </header>
+
+    <div class="panel-mount">
+      <div class="panel-inner" id="panel-users">
+        <div class="stats-grid">
+          <div class="stat-card accent"><div class="lbl">Total Users</div><div class="val" id="statTotal">—</div></div>
+          <div class="stat-card success"><div class="lbl">Claimed Agents</div><div class="val" id="statClaimed">—</div></div>
+          <div class="stat-card warning"><div class="lbl">Unclaimed Users</div><div class="val" id="statUnclaimed">—</div></div>
+          <div class="stat-card"><div class="lbl">Orphan Claims</div><div class="val" id="statOrphan">—</div></div>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" id="searchInput" placeholder="Search by name, email, agent, or UID…" oninput="renderUsers()" autocomplete="off"/>
+          </div>
+          <button class="refresh-btn" onclick="loadAll(true)">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+
+        <div id="usersContainer">
+          <div class="loader"><div class="spinner"></div><span>Loading users…</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal-card">
+    <h3>Edit User</h3>
+    <p class="sub">Changes apply immediately to the Firestore record.</p>
+
+    <div class="modal-info">
+      <div class="row"><span class="lbl">UID</span><span class="val" id="editUid">—</span></div>
+    </div>
+
+    <div class="modal-field">
+      <label>Full Name</label>
+      <input type="text" id="editName" placeholder="e.g. Juan Dela Cruz" />
+    </div>
+    <div class="modal-field">
+      <label>Email Address</label>
+      <input type="email" id="editEmail" placeholder="user@example.com" />
+    </div>
+
+    <div class="modal-msg" id="editMsg"></div>
+
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="modal-btn primary" id="editSaveBtn" onclick="saveUserEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- PASSWORD RESET MODAL -->
+<div class="modal-overlay hidden" id="pwdModal">
+  <div class="modal-card">
+    <h3>Reset Password</h3>
+    <p class="sub">Choose how you want to reset this user's password.</p>
+
+    <div class="modal-info">
+      <div class="row"><span class="lbl">User</span><span class="val" id="pwdUserName">—</span></div>
+      <div class="row"><span class="lbl">Email</span><span class="val" id="pwdUserEmail">—</span></div>
+    </div>
+
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="pwdModeEmailBtn" onclick="setPwdMode('email')">📧 Send Reset Email</button>
+      <button class="mode-btn" id="pwdModeDirectBtn" onclick="setPwdMode('direct')">✏️ Set Directly</button>
+    </div>
+
+    <!-- EMAIL MODE -->
+    <div id="pwdEmailMode">
+      <div class="modal-notice">
+        Firebase sends a reset link to the user's email.<br>
+        They click it → set a new password → log in.<br>
+        <strong>Standard, secure way.</strong>
+      </div>
+    </div>
+
+    <!-- DIRECT MODE -->
+    <div id="pwdDirectMode" class="hidden">
+      <div class="modal-field">
+        <label>New Password (min 6 chars)</label>
+        <input type="text" id="pwdNewValue" placeholder="Enter new password" autocomplete="off" />
+      </div>
+      <div class="modal-notice warn">
+        ⚠️ Requires the <strong>setUserPassword</strong> Cloud Function to be deployed. If it isn't, you'll see an error explaining what to do.
+      </div>
+    </div>
+
+    <div class="modal-msg" id="pwdMsg"></div>
+
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closePwdModal()">Cancel</button>
+      <button class="modal-btn primary" id="pwdSubmitBtn" onclick="doPwdReset()">Send Reset Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- AGENT PICKER MODAL -->
+<div class="modal-overlay hidden" id="agentModal">
+  <div class="modal-card lg">
+    <h3>Assign Agent</h3>
+    <p class="sub" id="agentModalSub">Choose an agent to link to this user. Avatars are fetched from Monitoring.</p>
+
+    <div class="modal-info">
+      <div class="row"><span class="lbl">User</span><span class="val" id="agentModalUser">—</span></div>
+      <div class="row"><span class="lbl">Current</span><span class="val" id="agentModalCurrent">—</span></div>
+    </div>
+
+    <input type="text" class="agent-picker-search" id="agentSearch" placeholder="🔍 Search agents by name…" oninput="renderAgentPicker()" autocomplete="off" />
+
+    <div class="agent-picker-grid" id="agentPickerGrid">
+      <div class="agent-picker-empty">Loading agents…</div>
+    </div>
+
+    <div class="modal-msg" id="agentMsg"></div>
+
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeAgentModal()">Cancel</button>
+      <button class="modal-btn primary" id="agentSaveBtn" onclick="saveAgentAssignment()">Assign Agent</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal-card">
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p class="sub" id="confirmSub">This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="modal-btn primary" id="confirmYesBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span class="icon">✓</span><span id="toastText">Done</span></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   ⚠️ CONFIGURE THESE
+   ═══════════════════════════════════════════════════════════════ */
+const ADMIN_UIDS = [
+  "iFM43WdQ5rOg8KYq7k2FUxcB4Vl2"
+];
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCv9HPl5I4l1WfByGYT4fKiI6D4GBAqY-0",
+  authDomain: "namedispute-bda59.firebaseapp.com",
+  projectId: "namedispute-bda59",
+  storageBucket: "namedispute-bda59.firebasestorage.app",
+  messagingSenderId: "512536798701",
+  appId: "1:512536798701:web:478fcd481cadc151cb33e4",
+  measurementId: "G-47QYHE3TVE"
+};
+
+/* Monitoring project — holds agent profiles & photos */
+const MONITORING_CONFIG = {
+  apiKey: "AIzaSyCsoYyepyJGIqbdW-QfWUZjJozmxrx2oWk",
+  authDomain: "handlingdisputes.firebaseapp.com",
+  projectId: "handlingdisputes",
+  storageBucket: "handlingdisputes.firebasestorage.app",
+  messagingSenderId: "891854791293",
+  appId: "1:891854791293:web:70bf2ee2c964a144228714",
+  databaseURL: "https://handlingdisputes-default-rtdb.firebaseio.com"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+const functions = firebase.app().functions('us-central1'); // change region if your function is elsewhere
+
+/* Secondary app to read Monitoring profiles without clobbering main auth */
+const monitoringApp  = firebase.initializeApp(MONITORING_CONFIG, 'monitoring');
+const monProfilesRef = monitoringApp.database().ref('profiles');
+const monPhotosRef   = monitoringApp.database().ref('profiles/photos');
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════ */
+let ALL_USERS = [];
+let ALL_CLAIMS = {};
+let CURRENT_ADMIN = null;
+let currentEditUid = null;
+let currentPwdUid = null;
+let currentAgentUid = null;
+let confirmCallback = null;
+let pwdMode = 'email';
+
+/* Agent cache */
+let AGENTS_LIST = [];       // [{ name, role, photo, key }]
+let AGENTS_LOADED = false;
+let SELECTED_AGENT_NAME = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   UTIL
+   ═══════════════════════════════════════════════════════════════ */
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+function initials(name) {
+  return (name || '?').trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+}
+function encodeNameKey(name) { return (name || '').replace(/[.#$\[\]]/g, '_'); }
+
+function toast(text, type) {
+  const el = document.getElementById('toast');
+  document.getElementById('toastText').textContent = text;
+  el.className = 'toast show ' + (type || 'ok');
+  el.querySelector('.icon').textContent = type === 'error' ? '⚠' : '✓';
+  clearTimeout(window._toastT);
+  window._toastT = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+function showAuthMsg(text, type) {
+  const el = document.getElementById('authMsg');
+  el.textContent = text;
+  el.className = 'auth-msg visible ' + (type || 'error');
+}
+function hideAuthMsg() {
+  const el = document.getElementById('authMsg');
+  el.className = 'auth-msg'; el.textContent = '';
+}
+function friendlyErr(err) {
+  const code = err && err.code ? err.code : '';
+  switch (code) {
+    case 'auth/invalid-email': return 'Invalid email address.';
+    case 'auth/user-not-found': return 'No account with that email.';
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential': return 'Incorrect email or password.';
+    case 'auth/too-many-requests': return 'Too many attempts. Try again shortly.';
+    case 'auth/network-request-failed': return 'Network error. Check your connection.';
+    case 'permission-denied': return 'Permission denied. Check Firestore rules.';
+    case 'functions/not-found': return 'Cloud Function "setUserPassword" not found. Deploy it first (see instructions).';
+    case 'functions/unauthenticated': return 'You are not signed in.';
+    case 'functions/permission-denied': return 'Your admin UID is not whitelisted in the Cloud Function.';
+    case 'functions/internal': return 'Cloud Function error. Check logs.';
+    default: return (err && err.message) || 'Something went wrong.';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTH
+   ═══════════════════════════════════════════════════════════════ */
+async function doLogin() {
+  hideAuthMsg();
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass  = document.getElementById('adminPassword').value;
+  if (!email || !pass) return showAuthMsg('Please enter email and password.');
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch (err) {
+    showAuthMsg(friendlyErr(err));
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+async function doLogout() { await auth.signOut(); }
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    CURRENT_ADMIN = null;
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('adminPassword').value = '';
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = false; btn.textContent = 'Sign In';
+    return;
+  }
+  if (!ADMIN_UIDS.includes(user.uid)) {
+    await auth.signOut();
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.add('hidden');
+    showAuthMsg('This account is not authorized as an admin. Contact the project owner.');
+    return;
+  }
+  CURRENT_ADMIN = user;
+  document.getElementById('adminName').textContent = user.displayName || (user.email || '').split('@')[0] || 'Admin';
+  document.getElementById('adminEmailChip').textContent = user.email || '';
+  document.getElementById('adminAvatar').textContent = initials(user.displayName || user.email || 'A');
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  loadAll();
+});
+
+document.getElementById('loadingScreen').classList.remove('hidden');
+
+/* ═══════════════════════════════════════════════════════════════
+   DATA — USERS + CLAIMS
+   ═══════════════════════════════════════════════════════════════ */
+async function loadAll(force) {
+  const container = document.getElementById('usersContainer');
+  if (force) container.innerHTML = `<div class="loader"><div class="spinner"></div><span>Refreshing…</span></div>`;
+  try {
+    const [usersSnap, claimsSnap] = await Promise.all([
+      db.collection('disputeUsers').get(),
+      db.collection('agentClaims').get()
+    ]);
+    ALL_USERS = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    ALL_CLAIMS = {};
+    claimsSnap.forEach(d => { ALL_CLAIMS[d.id] = d.data() || {}; });
+
+    ALL_USERS.sort((a, b) => {
+      const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+      const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+      if (ta !== tb) return tb - ta;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    renderStats();
+    renderUsers();
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = `<div class="empty-state">
+      <div class="big" style="color:var(--accent)">Failed to load</div>
+      <div class="sub">${esc(err.message || err)}</div>
+      <div class="sub" style="margin-top:0.75rem; color:var(--warning);">⚠️ Make sure your Firestore rules are published.</div>
+    </div>`;
+  }
+}
+
+function renderStats() {
+  document.getElementById('statTotal').textContent = ALL_USERS.length;
+  document.getElementById('statClaimed').textContent = Object.keys(ALL_CLAIMS).length;
+
+  const usedAgentKeys = new Set(ALL_USERS.map(u => encodeNameKey(u.agentName || '')).filter(Boolean));
+  let orphan = 0;
+  Object.keys(ALL_CLAIMS).forEach(k => { if (!usedAgentKeys.has(k)) orphan++; });
+  document.getElementById('statOrphan').textContent = orphan;
+  document.getElementById('statUnclaimed').textContent = ALL_USERS.filter(u => !u.agentName).length;
+
+  document.getElementById('usersNavBadge').textContent = ALL_USERS.length;
+}
+
+function getFilteredUsers() {
+  const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  if (!q) return ALL_USERS;
+  return ALL_USERS.filter(u =>
+    (u.name || '').toLowerCase().includes(q) ||
+    (u.email || '').toLowerCase().includes(q) ||
+    (u.agentName || '').toLowerCase().includes(q) ||
+    (u.uid || '').toLowerCase().includes(q)
+  );
+}
+
+/* Find agent photo from cached agents list */
+function getAgentPhoto(agentName) {
+  if (!agentName) return null;
+  const key = encodeNameKey(agentName);
+  const a = AGENTS_LIST.find(x => x.key === key);
+  return a ? a.photo : null;
+}
+
+function renderUsers() {
+  const container = document.getElementById('usersContainer');
+  const list = getFilteredUsers();
+
+  if (!ALL_USERS.length) {
+    container.innerHTML = `<div class="empty-state"><div class="big">No users registered yet</div><div class="sub">Users will appear here once they sign up in the main app.</div></div>`;
+    return;
+  }
+  if (!list.length) {
+    container.innerHTML = `<div class="empty-state"><div class="big">No matches</div><div class="sub">Try a different search term.</div></div>`;
+    return;
+  }
+
+  const rows = list.map(u => {
+    const agentKey = encodeNameKey(u.agentName || '');
+    const claim = ALL_CLAIMS[agentKey];
+    const claimOk = claim && claim.uid === u.uid;
+
+    // Avatar for the agent pill
+    const photo = getAgentPhoto(u.agentName);
+    const avaHtml = photo
+      ? `<span class="pill-ava"><img src="${photo}" alt=""/></span>`
+      : `<span class="pill-ava">${esc(initials(u.agentName || '?'))}</span>`;
+
+    const agentPill = u.agentName
+      ? `<span class="agent-pill" title="${claimOk ? 'Claim verified' : 'No matching claim'}">${avaHtml}${esc(u.agentName)}${claimOk ? '' : ' ⚠'}</span>`
+      : `<span class="agent-pill unclaimed">— none —</span>`;
+
+    const created = u.createdAt && u.createdAt.toDate
+      ? u.createdAt.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' })
+      : '—';
+
+    return `<tr>
+      <td class="td-name">${esc(u.name || '—')}</td>
+      <td class="td-mono">${esc(u.email || '—')}</td>
+      <td>${agentPill}</td>
+      <td class="td-uid col-uid" title="${esc(u.uid)}">${esc(u.uid)}</td>
+      <td class="td-mono col-created">${esc(created)}</td>
+      <td class="td-actions">
+        <button class="action-btn" onclick="openEdit('${esc(u.uid)}')">✎ Edit</button>
+        <button class="action-btn warn" onclick="openPwd('${esc(u.uid)}')">🔑 Password</button>
+        <button class="action-btn danger" onclick="openAgentPicker('${esc(u.uid)}')">🎯 Assign Agent</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `<div class="users-table-wrap">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Agent</th>
+          <th class="col-uid">UID</th>
+          <th class="col-created">Created</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EDIT USER (name + email only — agent now via picker)
+   ═══════════════════════════════════════════════════════════════ */
+function openEdit(uid) {
+  const u = ALL_USERS.find(x => x.uid === uid);
+  if (!u) return;
+  currentEditUid = uid;
+  document.getElementById('editUid').textContent = uid;
+  document.getElementById('editName').value = u.name || '';
+  document.getElementById('editEmail').value = u.email || '';
+  const msg = document.getElementById('editMsg');
+  msg.className = 'modal-msg'; msg.textContent = '';
+  document.getElementById('editModal').classList.remove('hidden');
+}
+function closeEditModal() {
+  document.getElementById('editModal').classList.add('hidden');
+  currentEditUid = null;
+}
+
+async function saveUserEdit() {
+  if (!currentEditUid) return;
+  const newName  = document.getElementById('editName').value.trim();
+  const newEmail = document.getElementById('editEmail').value.trim();
+  const btn = document.getElementById('editSaveBtn');
+
+  if (!newName)  return showEditMsg('Name cannot be empty.', 'error');
+  if (!newEmail) return showEditMsg('Email cannot be empty.', 'error');
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await db.collection('disputeUsers').doc(currentEditUid).update({
+      name: newName,
+      email: newEmail
+    });
+
+    // Sync email to the agent claim if one exists
+    const u = ALL_USERS.find(x => x.uid === currentEditUid);
+    const agentKey = encodeNameKey((u && u.agentName) || '');
+    if (agentKey && ALL_CLAIMS[agentKey] && ALL_CLAIMS[agentKey].uid === currentEditUid) {
+      await db.collection('agentClaims').doc(agentKey).update({ email: newEmail });
+    }
+
+    showEditMsg('Saved!', 'ok');
+    toast('User updated');
+    setTimeout(() => { closeEditModal(); loadAll(true); }, 700);
+  } catch (err) {
+    console.error(err);
+    showEditMsg(err.message || 'Failed to save.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
+}
+function showEditMsg(text, type) {
+  const msg = document.getElementById('editMsg');
+  msg.textContent = text;
+  msg.className = 'modal-msg visible ' + (type || 'error');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PASSWORD RESET — two modes
+   ═══════════════════════════════════════════════════════════════ */
+function openPwd(uid) {
+  const u = ALL_USERS.find(x => x.uid === uid);
+  if (!u) return;
+  currentPwdUid = uid;
+  document.getElementById('pwdUserName').textContent = u.name || '—';
+  document.getElementById('pwdUserEmail').textContent = u.email || '(no email on file)';
+  document.getElementById('pwdNewValue').value = '';
+  setPwdMode('email');
+  const msg = document.getElementById('pwdMsg');
+  msg.className = 'modal-msg'; msg.textContent = '';
+  document.getElementById('pwdModal').classList.remove('hidden');
+}
+function closePwdModal() {
+  document.getElementById('pwdModal').classList.add('hidden');
+  currentPwdUid = null;
+}
+function setPwdMode(mode) {
+  pwdMode = mode;
+  document.getElementById('pwdModeEmailBtn').classList.toggle('active', mode === 'email');
+  document.getElementById('pwdModeDirectBtn').classList.toggle('active', mode === 'direct');
+  document.getElementById('pwdEmailMode').classList.toggle('hidden', mode !== 'email');
+  document.getElementById('pwdDirectMode').classList.toggle('hidden', mode !== 'direct');
+  document.getElementById('pwdSubmitBtn').textContent = mode === 'email' ? 'Send Reset Email' : 'Set New Password';
+  const msg = document.getElementById('pwdMsg');
+  msg.className = 'modal-msg'; msg.textContent = '';
+}
+
+async function doPwdReset() {
+  if (!currentPwdUid) return;
+  const u = ALL_USERS.find(x => x.uid === currentPwdUid);
+  if (!u) return;
+
+  const btn = document.getElementById('pwdSubmitBtn');
+
+  // ═══ EMAIL MODE ═══
+  if (pwdMode === 'email') {
+    if (!u.email) {
+      return showPwdMsg('This user has no email on file.\n\nUse ✎ Edit to add their real email first.', 'error');
+    }
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      await auth.sendPasswordResetEmail(u.email);
+      showPwdMsg(
+        `✅ Password reset email sent to:\n${u.email}\n\n` +
+        `From: noreply@namedispute-bda59.firebaseapp.com\n\n` +
+        `💡 If they don't see it, check the Spam folder.`,
+        'ok'
+      );
+      toast('Reset email sent to ' + u.email);
+    } catch (err) {
+      console.error(err);
+      showPwdMsg('Failed to send:\n' + friendlyErr(err), 'error');
+      toast('Failed: ' + friendlyErr(err), 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Send Reset Email';
+    }
+    return;
+  }
+
+  // ═══ DIRECT MODE ═══
+  const newPwd = document.getElementById('pwdNewValue').value;
+  if (!newPwd || newPwd.length < 6) {
+    return showPwdMsg('Password must be at least 6 characters.', 'error');
+  }
+
+  btn.disabled = true; btn.textContent = 'Setting…';
+  try {
+    const fn = functions.httpsCallable('setUserPassword');
+    await fn({ uid: currentPwdUid, newPassword: newPwd });
+    showPwdMsg(
+      `✅ Password updated successfully.\n\n` +
+      `Tell ${u.name || 'the user'} their new password:\n\n` +
+      `    ${newPwd}\n\n` +
+      `They can now sign in with their email + this new password.`,
+      'ok'
+    );
+    toast('Password updated for ' + (u.name || u.email));
+  } catch (err) {
+    console.error(err);
+    const msg = (err && err.code === 'functions/not-found')
+      ? `⚠️ Cloud Function "setUserPassword" is not deployed yet.\n\nDeploy it once and this button will work forever.\n\nSee the Cloud Function code in the instructions.\n\nError: ${err.message}`
+      : 'Failed:\n' + friendlyErr(err);
+    showPwdMsg(msg, 'error');
+    toast('Failed: see modal for details', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Set New Password';
+  }
+}
+
+function showPwdMsg(text, type) {
+  const msg = document.getElementById('pwdMsg');
+  msg.textContent = text;
+  msg.className = 'modal-msg visible ' + (type || 'error');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AGENT PICKER — searchable, with photos & names
+   ═══════════════════════════════════════════════════════════════ */
+async function loadAgents() {
+  if (AGENTS_LOADED && AGENTS_LIST.length) return;
+  try {
+    const [profilesSnap, photosSnap] = await Promise.all([
+      monProfilesRef.once('value'),
+      monPhotosRef.once('value')
+    ]);
+    const profiles = profilesSnap.val() || {};
+    const photos   = photosSnap.val()   || {};
+
+    // Build a "photo by name key" map
+    const photoByName = {};
+    Object.keys(photos).forEach(k => { if (photos[k]) photoByName[k] = photos[k]; });
+
+    const names = new Set();
+    Object.keys(profiles).forEach(k => {
+      const p = profiles[k];
+      if (p && p.name) names.add(p.name);
+    });
+
+    AGENTS_LIST = [...names].map(n => {
+      const key = encodeNameKey(n);
+      return {
+        name: n,
+        key,
+        role: (profiles[key] && profiles[key].role) || '',
+        photo: photoByName[key] || null
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+
+    AGENTS_LOADED = true;
+  } catch (err) {
+    console.error('Failed to load agents:', err);
+    AGENTS_LIST = [];
+  }
+}
+
+async function openAgentPicker(uid) {
+  const u = ALL_USERS.find(x => x.uid === uid);
+  if (!u) return;
+
+  currentAgentUid = uid;
+  SELECTED_AGENT_NAME = u.agentName || null;
+
+  document.getElementById('agentModalUser').textContent = u.name || u.email || uid;
+  document.getElementById('agentModalCurrent').textContent = u.agentName || '— none —';
+  document.getElementById('agentSearch').value = '';
+  document.getElementById('agentMsg').className = 'modal-msg';
+  document.getElementById('agentMsg').textContent = '';
+
+  const grid = document.getElementById('agentPickerGrid');
+  grid.innerHTML = `<div class="agent-picker-empty"><div class="spinner" style="margin:0 auto 0.6rem;"></div>Loading agents…</div>`;
+
+  document.getElementById('agentModal').classList.remove('hidden');
+
+  await loadAgents();
+  renderAgentPicker();
+}
+
+function closeAgentModal() {
+  document.getElementById('agentModal').classList.add('hidden');
+  currentAgentUid = null;
+  SELECTED_AGENT_NAME = null;
+}
+
+function renderAgentPicker() {
+  const grid = document.getElementById('agentPickerGrid');
+  const q = (document.getElementById('agentSearch').value || '').trim().toLowerCase();
+
+  if (!AGENTS_LIST.length) {
+    grid.innerHTML = `<div class="agent-picker-empty">No agents found in Monitoring.<br>Add agent profiles there first.</div>`;
+    return;
+  }
+
+  const filtered = q
+    ? AGENTS_LIST.filter(a => a.name.toLowerCase().includes(q))
+    : AGENTS_LIST;
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="agent-picker-empty">No agents match "${esc(q)}"</div>`;
+    return;
+  }
+
+  // Determine which agents are claimed by *other* users
+  const claimedByOthers = new Set();
+  Object.keys(ALL_CLAIMS).forEach(k => {
+    const claim = ALL_CLAIMS[k];
+    if (claim && claim.uid && claim.uid !== currentAgentUid) claimedByOthers.add(k);
+  });
+
+  grid.innerHTML = filtered.map(a => {
+    const isTaken = claimedByOthers.has(a.key);
+    const isSelected = a.name === SELECTED_AGENT_NAME;
+    const cls = ['agent-item'];
+    if (isSelected && !isTaken) cls.push('selected');
+    if (isTaken) cls.push('taken');
+
+    const avaHtml = a.photo
+      ? `<span class="ava"><img src="${a.photo}" alt=""/></span>`
+      : `<span class="ava">${esc(initials(a.name))}</span>`;
+
+    const badge = isTaken
+      ? `<span class="lock-badge" title="Already taken">🔒</span>`
+      : (isSelected ? `<span class="tick">✓</span>` : '');
+
+    const subline = isTaken
+      ? 'Taken by another user'
+      : (a.role ? esc(a.role) : '—');
+
+    return `<button class="${cls.join(' ')}" ${isTaken ? 'disabled' : `onclick="pickAgent('${esc(a.name).replace(/'/g, "\\'")}')"`}>
+      ${badge}
+      ${avaHtml}
+      <div class="info">
+        <div class="nm">${esc(a.name)}</div>
+        <div class="rl">${subline}</div>
+      </div>
+    </button>`;
+  }).join('');
+}
+
+function pickAgent(name) {
+  SELECTED_AGENT_NAME = name;
+  renderAgentPicker();
+  const msg = document.getElementById('agentMsg');
+  msg.className = 'modal-msg visible info';
+  msg.textContent = `Selected: ${name}\nClick "Assign Agent" to save.`;
+}
+
+async function saveAgentAssignment() {
+  if (!currentAgentUid) return;
+  const u = ALL_USERS.find(x => x.uid === currentAgentUid);
+  if (!u) return;
+
+  const btn = document.getElementById('agentSaveBtn');
+  const msg = document.getElementById('agentMsg');
+
+  // Allow clearing the agent (releases claim)
+  if (!SELECTED_AGENT_NAME) {
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      const oldKey = encodeNameKey(u.agentName || '');
+      if (oldKey && ALL_CLAIMS[oldKey] && ALL_CLAIMS[oldKey].uid === currentAgentUid) {
+        await db.collection('agentClaims').doc(oldKey).delete();
+      }
+      await db.collection('disputeUsers').doc(currentAgentUid).update({ agentName: '' });
+      toast('Agent cleared');
+      setTimeout(() => { closeAgentModal(); loadAll(true); }, 400);
+    } catch (err) {
+      console.error(err);
+      msg.className = 'modal-msg visible error';
+      msg.textContent = 'Failed: ' + (err.message || err);
+      btn.disabled = false; btn.textContent = 'Assign Agent';
+    }
+    return;
+  }
+
+  const newName = SELECTED_AGENT_NAME;
+  const newKey  = encodeNameKey(newName);
+  const oldKey  = encodeNameKey(u.agentName || '');
+
+  // Check the target agent isn't already claimed by someone else
+  const existing = ALL_CLAIMS[newKey];
+  if (existing && existing.uid && existing.uid !== currentAgentUid) {
+    msg.className = 'modal-msg visible error';
+    msg.textContent = `"${newName}" is already claimed by another user (${existing.email || existing.uid}).`;
+    return;
+  }
+
+  // No-op if same agent
+  if (oldKey === newKey) {
+    msg.className = 'modal-msg visible info';
+    msg.textContent = 'This user already has that agent. Nothing to change.';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Assigning…';
+  try {
+    // 1. Release old claim if owned by this user
+    if (oldKey && ALL_CLAIMS[oldKey] && ALL_CLAIMS[oldKey].uid === currentAgentUid) {
+      await db.collection('agentClaims').doc(oldKey).delete();
+    }
+    // 2. Create / update new claim
+    await db.collection('agentClaims').doc(newKey).set({
+      agentName: newName,
+      uid: currentAgentUid,
+      email: u.email || '',
+      claimedAt: existing && existing.claimedAt ? existing.claimedAt : firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // 3. Update user doc
+    await db.collection('disputeUsers').doc(currentAgentUid).update({ agentName: newName });
+
+    toast(`Assigned ${newName}`);
+    msg.className = 'modal-msg visible ok';
+    msg.textContent = `✅ Assigned "${newName}" to ${u.name || u.email}.`;
+    setTimeout(() => { closeAgentModal(); loadAll(true); }, 700);
+  } catch (err) {
+    console.error(err);
+    msg.className = 'modal-msg visible error';
+    msg.textContent = 'Failed: ' + (err.message || err);
+    btn.disabled = false; btn.textContent = 'Assign Agent';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONFIRM MODAL (kept for future use)
+   ═══════════════════════════════════════════════════════════════ */
+function openConfirm(title, sub, cb) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmSub').textContent = sub;
+  confirmCallback = cb;
+  document.getElementById('confirmModal').classList.remove('hidden');
+  const btn = document.getElementById('confirmYesBtn');
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try { await confirmCallback(); } finally {
+      btn.disabled = false;
+      closeConfirm();
+    }
+  };
+}
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  confirmCallback = null;
+}
+
+function switchPanel(name) { /* reserved for future panels */ }
+</script>
+</body>
+</html>
