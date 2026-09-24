@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -532,6 +531,7 @@
   .tk-table td.td-meta .meta-line { display: block; }
   .tk-table td.td-type { white-space: nowrap; }
   .tk-table td.td-status { white-space: nowrap; }
+  .tk-table td.td-actions { white-space: nowrap; text-align: right; }
 
   .tk-type { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; font-weight: 600; padding: 0.12rem 0.5rem; border-radius: 100px; letter-spacing: 0.06em; text-transform: uppercase; display: inline-block; }
   .tk-type.type-Dispute { background: rgba(255,77,77,0.1); color: #ff8a8a; border: 1px solid rgba(255,77,77,0.22); }
@@ -550,6 +550,21 @@
   .tk-empty .big { font-size: 0.88rem; color: var(--text-soft); font-weight: 600; margin-bottom: 0.5rem; }
   .tk-empty .sub { font-size: 0.72rem; color: var(--muted); line-height: 1.55; }
   .tk-loader { display: flex; align-items: center; justify-content: center; padding: 3rem 1rem; gap: 0.6rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+
+  /* ═══ ACTION BUTTONS ═══ */
+  .tk-act-btn {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.7rem; margin-left: 0.3rem;
+    background: transparent; border: 1px solid var(--border); border-radius: 7px;
+    color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem; font-weight: 500; cursor: pointer;
+    transition: all 0.15s; letter-spacing: 0.03em;
+  }
+  .tk-act-btn:hover { color: var(--text); border-color: var(--text-soft); }
+  .tk-act-btn.done:hover { border-color: var(--success); color: var(--success); background: rgba(0,229,160,0.06); }
+  .tk-act-btn.edit:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.06); }
+  .tk-act-btn.delete:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,77,0.06); }
+  .tk-act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* ═══ SETTINGS PANEL ═══ */
   .set-wrap {
@@ -705,6 +720,7 @@
   .confirm-btn.cancel { background: transparent; color: var(--muted); }
   .confirm-btn.cancel:hover { border-color: var(--text-soft); color: var(--text-soft); }
   .confirm-btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-dim)); color: #0a0c11; border-color: transparent; }
+  .confirm-btn.danger { background: linear-gradient(135deg, #ff4d4d, #cc0000); color: #fff; border-color: transparent; }
   .confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .gen-confirm-info { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.1rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; line-height: 1.7; }
   .gen-confirm-info .row { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
@@ -713,6 +729,24 @@
   .gen-confirm-info .val.accent { color: var(--accent); }
   .gen-confirm-info .val.success { color: var(--success); }
   .gen-confirm-info .divider-sm { border-top: 1px solid var(--border); margin: 0.55rem 0; }
+
+  /* ═══ EDIT TICKET MODAL ═══ */
+  .edit-field { margin-bottom: 1rem; }
+  .edit-field label {
+    display: block; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .edit-field input, .edit-field select, .edit-field textarea {
+    width: 100%; background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.65rem 0.85rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;
+    outline: none; transition: all 0.15s;
+  }
+  .edit-field textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+  .edit-field input:focus, .edit-field select:focus, .edit-field textarea:focus {
+    border-color: var(--accent); background: var(--bg);
+  }
 
   /* ═══ ROTATION INFO (modal) ═══ */
   .rot-info {
@@ -1390,6 +1424,71 @@
   </div>
 </div>
 
+<!-- EDIT TICKET MODAL -->
+<div class="confirm-overlay hidden" id="editTicketOverlay">
+  <div class="confirm-card">
+    <h3>Edit Ticket</h3>
+    <p>Update the ticket details below. Changes will sync to Handling Monitoring.</p>
+
+    <div class="edit-field">
+      <label>Ticket ID</label>
+      <input type="text" id="editTicketId" disabled style="opacity:0.7;cursor:not-allowed;" />
+    </div>
+
+    <div class="edit-field">
+      <label>Title</label>
+      <input type="text" id="editTicketTitle" placeholder="Ticket title" />
+    </div>
+
+    <div class="edit-field">
+      <label>Type</label>
+      <select id="editTicketType">
+        <option value="Dispute">Dispute</option>
+        <option value="Inquiry">Inquiry</option>
+        <option value="Partner Portal">Partner Portal</option>
+      </select>
+    </div>
+
+    <div class="edit-field">
+      <label>Status</label>
+      <select id="editTicketStatus">
+        <option value="Pending">Pending</option>
+        <option value="Completed">Completed</option>
+        <option value="Skipped">Skipped</option>
+      </select>
+    </div>
+
+    <div class="edit-field" id="editSkipReasonField" style="display:none;">
+      <label>Skip Reason</label>
+      <textarea id="editTicketSkipReason" placeholder="Why was this skipped?"></textarea>
+    </div>
+
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" onclick="closeEditTicket()">Cancel</button>
+      <button class="confirm-btn primary" id="editTicketSaveBtn" onclick="saveEditTicket()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="confirm-overlay hidden" id="deleteTicketOverlay">
+  <div class="confirm-card">
+    <h3>Delete Ticket?</h3>
+    <p>This will permanently remove the ticket from Handling Monitoring. This cannot be undone.</p>
+
+    <div class="gen-confirm-info">
+      <div class="row"><span class="lbl">Ticket ID</span><span class="val accent" id="deleteTicketId">—</span></div>
+      <div class="divider-sm"></div>
+      <div class="row"><span class="lbl">Title</span><span class="val" id="deleteTicketTitle">—</span></div>
+    </div>
+
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" onclick="closeDeleteTicket()">Cancel</button>
+      <button class="confirm-btn danger" id="deleteTicketConfirmBtn" onclick="confirmDeleteTicket()">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ═══════════════════════════════════════════════════════════════
    FIREBASE INIT
@@ -1440,6 +1539,9 @@ let myFsTicketsUnsub = null;
 
 let MONITORING_ROTATION = { rotationIndex: 0, workingToday: [] };
 let rotationListenerStarted = false;
+
+let editingTicketKey = null;
+let deletingTicketKey = null;
 
 /* ═══════════════════════════════════════════════════════════════
    UTILITIES
@@ -1978,14 +2080,14 @@ function startMyTicketsListener() {
   if (!myTicketsUnsub) {
     myTicketsUnsub = monTicketsRef.on('value', snap => {
       const raw = snap.val() || {};
-      myRtdbTickets = Object.keys(raw).map(k => ({ _key: 'rtdb_' + k, _source: 'rtdb', ...raw[k] }));
+      myRtdbTickets = Object.keys(raw).map(k => ({ _key: 'rtdb_' + k, _source: 'rtdb', _firebaseKey: k, ...raw[k] }));
       rebuildMyTickets(myNameLower);
     }, err => { console.error('RTDB tickets error:', err); });
   }
 
   if (!myFsTicketsUnsub) {
     myFsTicketsUnsub = monFirestoreTickets.onSnapshot(snap => {
-      myFirestoreTickets = snap.docs.map(d => ({ _key: 'fs_' + d.id, _source: 'fs', ...d.data() }));
+      myFirestoreTickets = snap.docs.map(d => ({ _key: 'fs_' + d.id, _source: 'fs', _firestoreId: d.id, ...d.data() }));
       rebuildMyTickets(myNameLower);
     }, err => { console.error('Firestore tickets error:', err); });
   }
@@ -2124,6 +2226,8 @@ function tkRenderRow(t) {
   const skip   = t.skipReason
     ? `<div class="tk-skip-note"><strong>Skipped:</strong> ${tkEsc(t.skipReason)}${t.skipNote ? ' — ' + tkEsc(t.skipNote) : ''}</div>`
     : '';
+  const keyAttr = tkEsc(t._key || '');
+  const doneDisabled = status === 'Completed' ? 'disabled' : '';
   return `<tr class="row-${tkEsc(status)}">
     <td class="td-id">${tkEsc(t.id || '—')}</td>
     <td class="td-type"><span class="tk-type ${tkTypeClass(type)}">${tkEsc(tkFormatType(type))}</span></td>
@@ -2143,6 +2247,11 @@ function tkRenderRow(t) {
     <td class="td-status">
       <span class="tk-status status-${tkEsc(status)}"><span class="dot"></span>${tkEsc(status)}</span>
     </td>
+    <td class="td-actions">
+      <button class="tk-act-btn done" ${doneDisabled} onclick="openDoneTicket('${keyAttr}')" title="Mark as Completed">✓ Done</button>
+      <button class="tk-act-btn edit" onclick="openEditTicket('${keyAttr}')" title="Edit ticket">✎ Edit</button>
+      <button class="tk-act-btn delete" onclick="openDeleteTicket('${keyAttr}')" title="Delete ticket">✕ Delete</button>
+    </td>
   </tr>`;
 }
 
@@ -2158,6 +2267,7 @@ function tkRenderTable(list) {
           <th class="th-sortable col-time" onclick="tkSetSort('time')">Time ${tkSortIndicator('time')}</th>
           <th class="th-sortable" onclick="tkSetSort('assignee')">Assignee ${tkSortIndicator('assignee')}</th>
           <th class="th-sortable" onclick="tkSetSort('status')">Status ${tkSortIndicator('status')}</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -2216,6 +2326,171 @@ function tkSetFilter(f) {
   tkRender();
 }
 window.tkSetFilter = tkSetFilter;
+
+/* ═══════════════════════════════════════════════════════════════
+   TICKET ACTIONS: DONE / EDIT / DELETE
+   ═══════════════════════════════════════════════════════════════ */
+function findTicketByKey(key) {
+  return MY_TICKETS.find(t => t._key === key) || null;
+}
+
+async function markTicketStatus(ticket, newStatus, extra = {}) {
+  if (!ticket) return false;
+  const payload = {
+    status: newStatus,
+    ...extra
+  };
+  try {
+    if (ticket._source === 'rtdb') {
+      const key = ticket._firebaseKey;
+      if (!key) return false;
+      await monTicketsRef.child(key).update(payload);
+    } else if (ticket._source === 'fs') {
+      const docId = ticket._firestoreId;
+      if (!docId) return false;
+      await monFirestoreTickets.doc(docId).update(payload);
+    } else {
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('markTicketStatus failed:', err);
+    return false;
+  }
+}
+
+window.openDoneTicket = async function (key) {
+  const ticket = findTicketByKey(key);
+  if (!ticket) return;
+  const ok = await markTicketStatus(ticket, 'Completed');
+  if (ok) {
+    ticket.status = 'Completed';
+    rebuildMyTickets(CURRENT_USER.agentName.trim().toLowerCase());
+  } else {
+    alert('Could not mark this ticket as completed. Please try again.');
+  }
+};
+
+window.openEditTicket = function (key) {
+  const ticket = findTicketByKey(key);
+  if (!ticket) return;
+  editingTicketKey = key;
+  document.getElementById('editTicketId').value = ticket.id || '';
+  document.getElementById('editTicketTitle').value = ticket.title || '';
+  document.getElementById('editTicketType').value = ticket.type || 'Dispute';
+  document.getElementById('editTicketStatus').value = ticket.status || 'Pending';
+  document.getElementById('editTicketSkipReason').value = ticket.skipReason || '';
+  toggleSkipReasonField();
+  document.getElementById('editTicketOverlay').classList.remove('hidden');
+};
+
+window.closeEditTicket = function () {
+  editingTicketKey = null;
+  document.getElementById('editTicketOverlay').classList.add('hidden');
+};
+
+function toggleSkipReasonField() {
+  const status = document.getElementById('editTicketStatus').value;
+  const field = document.getElementById('editSkipReasonField');
+  if (status === 'Skipped') field.style.display = 'block';
+  else field.style.display = 'none';
+}
+
+document.getElementById('editTicketStatus').addEventListener('change', toggleSkipReasonField);
+
+window.saveEditTicket = async function () {
+  const key = editingTicketKey;
+  if (!key) return;
+  const ticket = findTicketByKey(key);
+  if (!ticket) return;
+
+  const newTitle  = document.getElementById('editTicketTitle').value.trim();
+  const newType   = document.getElementById('editTicketType').value;
+  const newStatus = document.getElementById('editTicketStatus').value;
+  const newSkip   = document.getElementById('editTicketSkipReason').value.trim();
+
+  if (!newTitle) { alert('Title cannot be empty.'); return; }
+
+  const payload = {
+    title: newTitle,
+    type: newType,
+    status: newStatus,
+    skipReason: newStatus === 'Skipped' ? newSkip : firebase.firestore.FieldValue.delete ? undefined : null
+  };
+
+  // remove undefined keys
+  Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+
+  const btn = document.getElementById('editTicketSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    if (ticket._source === 'rtdb') {
+      const fkey = ticket._firebaseKey;
+      if (newStatus === 'Skipped') {
+        await monTicketsRef.child(fkey).update({ title: newTitle, type: newType, status: newStatus, skipReason: newSkip });
+      } else {
+        await monTicketsRef.child(fkey).update({ title: newTitle, type: newType, status: newStatus, skipReason: null });
+      }
+    } else if (ticket._source === 'fs') {
+      const docId = ticket._firestoreId;
+      const updatePayload = { title: newTitle, type: newType, status: newStatus };
+      if (newStatus === 'Skipped') updatePayload.skipReason = newSkip;
+      else updatePayload.skipReason = firebase.firestore.FieldValue.delete();
+      await monFirestoreTickets.doc(docId).update(updatePayload);
+    }
+    closeEditTicket();
+  } catch (err) {
+    console.error('Save failed:', err);
+    alert('Could not save changes: ' + (err.message || err));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
+};
+
+window.openDeleteTicket = function (key) {
+  const ticket = findTicketByKey(key);
+  if (!ticket) return;
+  deletingTicketKey = key;
+  document.getElementById('deleteTicketId').textContent = ticket.id || '—';
+  document.getElementById('deleteTicketTitle').textContent = ticket.title || '—';
+  document.getElementById('deleteTicketOverlay').classList.remove('hidden');
+};
+
+window.closeDeleteTicket = function () {
+  deletingTicketKey = null;
+  document.getElementById('deleteTicketOverlay').classList.add('hidden');
+};
+
+window.confirmDeleteTicket = async function () {
+  const key = deletingTicketKey;
+  if (!key) return;
+  const ticket = findTicketByKey(key);
+  if (!ticket) return;
+
+  const btn = document.getElementById('deleteTicketConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
+
+  try {
+    if (ticket._source === 'rtdb') {
+      const fkey = ticket._firebaseKey;
+      if (fkey) await monTicketsRef.child(fkey).remove();
+    } else if (ticket._source === 'fs') {
+      const docId = ticket._firestoreId;
+      if (docId) await monFirestoreTickets.doc(docId).delete();
+    }
+    closeDeleteTicket();
+  } catch (err) {
+    console.error('Delete failed:', err);
+    alert('Could not delete ticket: ' + (err.message || err));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Yes, Delete';
+  }
+};
 
 /* ═══════════════════════════════════════════════════════════════
    SETTINGS PANEL LOGIC
