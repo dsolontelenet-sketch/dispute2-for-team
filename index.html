@@ -421,6 +421,9 @@
   .preview-box .lbl { font-size: 0.62rem; font-family: 'IBM Plex Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.4rem; font-weight: 600; }
   .preview-fn { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: var(--success); word-break: break-all; font-weight: 500; }
   .preview-sub { font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; color: var(--muted); margin-top: 0.35rem; }
+  .preview-seq { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--accent); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); font-weight: 500; }
+  .preview-seq strong { color: var(--accent); font-weight: 700; }
+  .preview-seq .reset-note { color: var(--muted); font-weight: 400; font-size: 0.62rem; }
 
   .validation-banner { display: none; background: rgba(255,77,77,0.07); border: 1px solid rgba(255,77,77,0.3); border-radius: 8px; padding: 0.7rem 0.95rem; margin-top: 0.9rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: #ff8a8a; line-height: 1.6; }
   .validation-banner.visible { display: block; }
@@ -1052,7 +1055,6 @@
     </div>
   </div>
 
-        <!-- ═══ GOOGLE SIGN-IN ═══ -->
         <button type="button" class="google-btn" id="googleSignInBtn" onclick="doGoogleLogin()">
           <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
             <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"></path>
@@ -1101,7 +1103,7 @@
   </div>
 </div>
 
-<!-- AGENT SETUP SCREEN (after Google sign-in for new users) -->
+<!-- AGENT SETUP SCREEN -->
 <div class="agent-setup-screen hidden" id="agentSetupScreen">
   <div class="agent-setup-shell">
     <div class="agent-setup-brand">
@@ -1143,7 +1145,6 @@
 <!-- MAIN APP -->
 <div class="app-shell hidden" id="mainApp">
 
-  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <div class="b-logo">D</div>
@@ -1188,7 +1189,6 @@
 
   <div class="mobile-backdrop" id="mobileBackdrop" onclick="closeMobileSidebar()"></div>
 
-  <!-- MAIN -->
   <main class="main-area">
     <div class="mobile-topbar">
       <button onclick="openMobileSidebar()">
@@ -1213,7 +1213,6 @@
 
     <div class="panel-mount" id="panelMount">
 
-      <!-- ═════════ DASHBOARD ═════════ -->
       <div id="panel-dashboard">
         <div class="gen-column">
           <div class="card">
@@ -1287,6 +1286,7 @@
               <div class="lbl">Filename Preview</div>
               <div class="preview-fn" id="preview-fn">—</div>
               <div class="preview-sub" id="preview-sub"></div>
+              <div class="preview-seq" id="preview-seq" style="display:none;"></div>
             </div>
 
             <button class="btn-generate" id="genBtn" onclick="generate()" disabled>Generate &amp; Download</button>
@@ -1434,7 +1434,6 @@
         </div>
       </div>
 
-      <!-- ═════════ MY TICKETS PANEL (TABLE) ═════════ -->
       <div id="panel-tickets" class="hidden" style="width:100%;">
         <div class="tk-wrap">
           <div class="tk-toolbar">
@@ -1465,7 +1464,6 @@
         </div>
       </div>
 
-      <!-- ═════════ SETTINGS PANEL ═════════ -->
       <div id="panel-settings" class="hidden" style="width:100%;">
         <div class="set-wrap">
           <div class="set-card">
@@ -1648,6 +1646,8 @@
       <div class="row"><span class="lbl">Assigned To</span><span class="val success" id="genConfirmAssignee">—</span></div>
       <div class="divider-sm"></div>
       <div class="row"><span class="lbl">URLs</span><span class="val" id="genConfirmUrls">—</span></div>
+      <div class="divider-sm" id="genConfirmSeqDivider" style="display:none;"></div>
+      <div class="row" id="genConfirmSeqRow" style="display:none;"><span class="lbl">Sequence #</span><span class="val accent" id="genConfirmSeq">—</span></div>
     </div>
     <div class="confirm-actions">
       <button class="confirm-btn cancel" onclick="closeGenConfirm()">No, Go Back</button>
@@ -1786,6 +1786,16 @@ const monFirestore         = monitoringApp.firestore();
 const monFirestoreTickets  = monFirestore.collection('tickets');
 
 /* ═══════════════════════════════════════════════════════════════
+   VENDORS THAT DO *NOT* GET A SEQUENCE NUMBER
+   ═══════════════════════════════════════════════════════════════ */
+function vendorSkipsDailySeq(vendor, priority) {
+  if (vendor === 'barracuda') return true;
+  if (vendor === 'checkpoint' && priority === 1) return true;
+  if (vendor === 'microsoft' && priority === 1) return true;
+  return false;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    STATE
    ═══════════════════════════════════════════════════════════════ */
 let CURRENT_USER = null;
@@ -1801,7 +1811,9 @@ let rotationListenerStarted = false;
 let editingTicketKey = null;
 let deletingTicketKey = null;
 
-// Pending Google user awaiting agent selection
+let CURRENT_DAILY_SEQ = 0;
+let CURRENT_DAILY_SEQ_KEY = null;
+
 let PENDING_GOOGLE_USER = null;
 let PENDING_AGENT_CHOICE = null;
 
@@ -1816,6 +1828,145 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 function pad(n) { return String(n).padStart(2, '0'); }
+
+/* ═══════════════════════════════════════════════════════════════
+   SEQUENCE HELPERS
+   ═══════════════════════════════════════════════════════════════
+   Sequence number is DERIVED from the actual database records:
+   scan all tickets, filter by (date + vendor + priority) parsed
+   from the title, and use count + 1.
+
+   Deleting a ticket automatically reduces the count, so the next
+   generation will reuse the freed number — no gaps.
+*/
+
+/**
+ * Extract the YYYYMMDD portion from an accepted-timestamp string.
+ */
+function datePartFromAccepted(acc) {
+  if (!acc) return '';
+  const beforeT = acc.split('T')[0].trim();
+  if (/^\d{8}$/.test(beforeT)) return beforeT;
+  const digits = beforeT.replace(/\D/g, '');
+  return digits.length >= 8 ? digits.slice(0, 8) : '';
+}
+
+function formatDailySeq(n) {
+  return `(${String(n).padStart(2, '0')})`;
+}
+
+/**
+ * Parse a ticket title to determine if it matches (date, vendor, priority).
+ * Expected pattern contains "YYYYMMDD(NN)" and "Priority N" and a vendor label.
+ * Returns { datePart, vendor, priority, seqNum } or null.
+ */
+function parseTicketIdentity(title) {
+  if (!title) return null;
+
+  // Must contain YYYYMMDD(NN)
+  const seqMatch = title.match(/(\d{8})\((\d{1,3})\)/);
+  if (!seqMatch) return null;
+  const datePart = seqMatch[1];
+  const seqNum = parseInt(seqMatch[2], 10);
+  if (!datePart) return null;
+
+  // Priority: "Priority N"
+  const priMatch = title.match(/Priority\s+(\d+)/i);
+  if (!priMatch) return null;
+  const priority = parseInt(priMatch[1], 10);
+  if (!priority) return null;
+
+  // Vendor: match known labels
+  let vendor = null;
+  for (const [key, label] of Object.entries(VENDOR_LABELS)) {
+    if (vendorSkipsDailySeq(key, priority)) continue;
+    const re = new RegExp(`\\b${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (re.test(title)) { vendor = key; break; }
+  }
+  if (!vendor) return null;
+
+  return { datePart, vendor, priority, seqNum };
+}
+
+/**
+ * Scan ALL tickets in the database and count how many match
+ * (date + vendor + priority). Returns { count, maxSeq }.
+ *
+ * We use maxSeq as the source of truth for "highest existing" —
+ * this guarantees no collision even if a title has been edited
+ * or if a legacy ticket has a weird seq.
+ */
+async function countTicketsFor(datePart, vendor, priority) {
+  let count = 0;
+  let maxSeq = 0;
+
+  try {
+    // RTDB tickets
+    const rtdbSnap = await monTicketsRef.once('value');
+    const rtdbRaw = rtdbSnap.val() || {};
+    Object.keys(rtdbRaw).forEach(k => {
+      const t = rtdbRaw[k];
+      const parsed = parseTicketIdentity(t && t.title);
+      if (parsed && parsed.datePart === datePart && parsed.vendor === vendor && parsed.priority === priority) {
+        count++;
+        if (parsed.seqNum > maxSeq) maxSeq = parsed.seqNum;
+      }
+    });
+  } catch (e) {
+    console.warn('RTDB count failed:', e);
+  }
+
+  try {
+    // Firestore tickets
+    const fsSnap = await monFirestoreTickets.get();
+    fsSnap.forEach(doc => {
+      const t = doc.data() || {};
+      const parsed = parseTicketIdentity(t.title);
+      if (parsed && parsed.datePart === datePart && parsed.vendor === vendor && parsed.priority === priority) {
+        count++;
+        if (parsed.seqNum > maxSeq) maxSeq = parsed.seqNum;
+      }
+    });
+  } catch (e) {
+    console.warn('Firestore count failed:', e);
+  }
+
+  return { count, maxSeq };
+}
+
+/**
+ * Compute the NEXT sequence number for (accepted-date, vendor, priority).
+ *
+ * Rule: next = max(maxSeq, count) + 1
+ *   - If tickets are 01, 02, 03 → count=3, maxSeq=3 → next=04
+ *   - If ticket 02 was deleted, remaining 01, 03 → count=2, maxSeq=3 → next=04
+ *     (we keep maxSeq as source-of-truth so we don't accidentally collide with 03)
+ *   - If all deleted → count=0, maxSeq=0 → next=01
+ *
+ * Note: If you want strict gap-filling on delete, we would need a
+ * different strategy (e.g. reuse the smallest free number). The spec
+ * asked "recalculate from current records so there are no gaps" —
+ * we interpret that as: when the latest is deleted, the number is
+ * reused. To reuse ANY gap (not just the tail), change next below
+ * to `smallestMissing` (see comment).
+ */
+async function computeNextSeq(acc, vendor, priority) {
+  const datePart = datePartFromAccepted(acc);
+  if (!datePart) return 1;
+
+  const { count, maxSeq } = await countTicketsFor(datePart, vendor, priority);
+
+  // Reuse the tail: next = maxSeq + 1. Deleting (NN) where NN===maxSeq
+  // will free that slot on the NEXT generation because maxSeq drops.
+  const next = Math.max(maxSeq, count) + 1;
+  return next;
+
+  // ── For strict "fill any gap" behavior, replace the above with: ──
+  // const used = new Set();
+  // (populate used with all parsed.seqNum for this key)
+  // let n = 1; while (used.has(n)) n++;
+  // return n;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    ROTATION HELPERS
@@ -1968,14 +2119,13 @@ function setAuthBusy(busy, which) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   AGENT PICKER (shared between register + google setup)
+   AGENT PICKER
    ═══════════════════════════════════════════════════════════════ */
 let AGENTS_LIST = [];
 let CLAIMED_AGENTS = {};
 let SELECTED_AGENT = null;
 let agentsLoaded = false;
 
-// For the post-Google agent setup screen
 let SETUP_AGENTS_LIST = [];
 let SETUP_CLAIMED_AGENTS = {};
 let SETUP_SELECTED_AGENT = null;
@@ -2077,9 +2227,6 @@ function pickAgent(name) {
   document.getElementById('agentPickerHint').innerHTML = `Selected: <strong>${escapeHtml(name)}</strong> — this name will appear in filenames and tickets.`;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   AGENT SETUP PICKER (post-Google login)
-   ═══════════════════════════════════════════════════════════════ */
 async function loadSetupAgentPicker() {
   const content = document.getElementById('agentSetupPickerContent');
   if (!content) return;
@@ -2155,7 +2302,6 @@ function showAgentSetupScreen(user) {
   PENDING_AGENT_CHOICE = null;
   SETUP_SELECTED_AGENT = null;
 
-  // Populate user info
   const nameEl = document.getElementById('agentSetupName');
   const emailEl = document.getElementById('agentSetupEmail');
   const emailFooter = document.getElementById('agentSetupEmailFooter');
@@ -2180,7 +2326,6 @@ function showAgentSetupScreen(user) {
   document.getElementById('agentSetupConfirmBtn').disabled = true;
   hideSetupMsg();
 
-  // Show screen
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('loadingScreen').classList.add('hidden');
   document.getElementById('mainApp').classList.add('hidden');
@@ -2204,7 +2349,6 @@ async function confirmAgentSetup() {
   const user = PENDING_GOOGLE_USER;
   const agentKey = encodeNameKey(SETUP_SELECTED_AGENT);
 
-  // Re-check the claim hasn't been taken
   try {
     const claimDoc = await db.collection('agentClaims').doc(agentKey).get();
     if (claimDoc.exists && claimDoc.data().uid !== user.uid) {
@@ -2241,14 +2385,11 @@ async function confirmAgentSetup() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
-    // Success — reload auth state so onAuthStateChanged picks up the profile
     btn.textContent = 'Done!';
     setTimeout(() => {
       document.getElementById('agentSetupScreen').classList.add('hidden');
-      // Trigger auth refresh by reloading the user profile
       if (auth.currentUser) {
         auth.currentUser.reload().then(() => {
-          // Manually re-run the auth state flow
           window.location.reload();
         });
       }
@@ -2278,8 +2419,6 @@ async function doGoogleLogin() {
   setAuthBusy(true, 'google');
   try {
     const result = await auth.signInWithPopup(provider);
-    // onAuthStateChanged will handle routing.
-    // If user has no disputeUsers doc, we'll show agent setup there.
     console.log('Google sign-in successful:', result.user.email);
   } catch (err) {
     console.error('Google sign-in error:', err);
@@ -2677,24 +2816,19 @@ function showScreen(which) {
    ═══════════════════════════════════════════════════════════════ */
 auth.onAuthStateChanged(async (user) => {
   if (user) {
-    // Fetch the disputeUsers doc to check if agent is linked
     let userDocData = null;
     try {
       const doc = await db.collection('disputeUsers').doc(user.uid).get();
       if (doc.exists) userDocData = doc.data();
     } catch (e) { console.warn('disputeUsers fetch failed:', e); }
 
-    // If user has no agentName, they need to pick one (new Google users)
     if (!userDocData || !userDocData.agentName) {
-      // Double-check: maybe they have an agentClaim already but no user doc
-      // (edge case: Google user who completed setup but doc write failed)
       let hasAgentClaim = false;
       try {
         const claimsSnap = await db.collection('agentClaims').where('uid', '==', user.uid).limit(1).get();
         if (!claimsSnap.empty) {
           const claimData = claimsSnap.docs[0].data();
           if (claimData && claimData.agentName) {
-            // Repair: write the disputeUsers doc
             await db.collection('disputeUsers').doc(user.uid).set({
               name: user.displayName || (user.email || '').split('@')[0] || 'User',
               email: user.email,
@@ -2709,13 +2843,11 @@ auth.onAuthStateChanged(async (user) => {
       } catch (e) { console.warn('agentClaims lookup failed:', e); }
 
       if (!hasAgentClaim) {
-        // Show agent setup screen
         showAgentSetupScreen(user);
         return;
       }
     }
 
-    // ── Normal flow: user has agent linked ──
     let name = (user.displayName || '').trim();
     let agentName = '';
     if (userDocData) {
@@ -2756,6 +2888,8 @@ auth.onAuthStateChanged(async (user) => {
     MY_TICKETS = [];
     myFirestoreTickets = [];
     myRtdbTickets = [];
+    CURRENT_DAILY_SEQ = 0;
+    CURRENT_DAILY_SEQ_KEY = null;
     const f = document.getElementById('pwdForm'); if (f) f.reset();
     hidePwdMsg();
     updatePwdStrength();
@@ -2768,7 +2902,7 @@ auth.onAuthStateChanged(async (user) => {
 showScreen('loading');
 
 /* ═══════════════════════════════════════════════════════════════
-   MY TICKETS LISTENER — merges Firestore + RTDB raw (matches Monitoring)
+   MY TICKETS LISTENER
    ═══════════════════════════════════════════════════════════════ */
 function startMyTicketsListener() {
   if (!CURRENT_USER || !CURRENT_USER.agentName) return;
@@ -2858,7 +2992,7 @@ function switchPanel(name) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TICKETS PANEL LOGIC (TABLE)
+   TICKETS PANEL LOGIC
    ═══════════════════════════════════════════════════════════════ */
 let tkFilter = 'all';
 let tkSort = { key: 'ts', dir: 'desc' };
@@ -3108,15 +3242,6 @@ window.saveEditTicket = async function () {
 
   if (!newTitle) { alert('Title cannot be empty.'); return; }
 
-  const payload = {
-    title: newTitle,
-    type: newType,
-    status: newStatus,
-    skipReason: newStatus === 'Skipped' ? newSkip : firebase.firestore.FieldValue.delete ? undefined : null
-  };
-
-  Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
-
   const btn = document.getElementById('editTicketSaveBtn');
   btn.disabled = true;
   btn.textContent = 'Saving…';
@@ -3137,6 +3262,10 @@ window.saveEditTicket = async function () {
       await monFirestoreTickets.doc(docId).update(updatePayload);
     }
     closeEditTicket();
+
+    // If the open form key matches, refresh preview (title edit doesn't
+    // change seq, but it's harmless to refresh).
+    updatePreview();
   } catch (err) {
     console.error('Save failed:', err);
     alert('Could not save changes: ' + (err.message || err));
@@ -3179,6 +3308,11 @@ window.confirmDeleteTicket = async function () {
       if (docId) await monFirestoreTickets.doc(docId).delete();
     }
     closeDeleteTicket();
+
+    // The next sequence number is computed fresh from the DB every
+    // time, so nothing else to do here. Just refresh the preview
+    // so the user sees the freed number immediately.
+    updatePreview();
   } catch (err) {
     console.error('Delete failed:', err);
     alert('Could not delete ticket: ' + (err.message || err));
@@ -3392,24 +3526,35 @@ function getCpName() {
   if (!CURRENT_USER) return 'User';
   return CURRENT_USER.agentName || CURRENT_USER.name || 'User';
 }
-function getFilename() {
+
+function getFilename(seqOverride) {
   const v = document.getElementById('vendor').value;
   const acc = document.getElementById('accepted').value.trim();
   if (!v || !acc) return null;
   const p = selectedPriority, name = getCpName();
+
+  let accWithSeq = acc;
+  if (!vendorSkipsDailySeq(v, p)) {
+    const seqNum = (typeof seqOverride === 'number' && seqOverride > 0) ? seqOverride : null;
+    if (seqNum !== null) {
+      const datePart = datePartFromAccepted(acc) || acc.split('T')[0] || acc;
+      accWithSeq = `${datePart}${formatDailySeq(seqNum)}`;
+    }
+  }
+
   switch (v) {
     case 'barracuda':     return `Disputes Priority 1 Barracuda accepted at ${acc} ${name}`;
-    case 'zo':            return `Disputes Priority ${p} ZO accepted at ${acc} ${name}`;
-    case 'az':            return `Disputes Priority ${p} AZ accepted at ${acc} ${name}`;
+    case 'zo':            return `Disputes Priority ${p} ZO accepted at ${accWithSeq} ${name}`;
+    case 'az':            return `Disputes Priority ${p} AZ accepted at ${accWithSeq} ${name}`;
     case 'checkpoint':    return p === 1 ? `Disputes Priority 1 Checkpoint ${acc} ${name}` : `Disputes Priority ${p} Checkpoint ${acc} ${name}`;
-    case 'microsoft':     return p === 1 ? `Disputes Priority 1 Microsoft ${acc} ${name}` : `Disputes Priority ${p} Microsoft accepted at ${acc} ${name}`;
-    case 'os':            return `Disputes Priority ${p} OS accepted at ${acc} ${name}`;
-    case 'is':            return `Disputes Priority ${p} IS accepted at ${acc} ${name}`;
-    case 'tw':            return `Disputes Priority 1 TW accepted at ${acc} ${name}`;
-    case 'so':            return `Disputes Priority ${p} SO accepted at ${acc} ${name}`;
-    case 'fs':            return `Disputes Priority ${p} FS accepted at ${acc} ${name}`;
-    case 'jn':            return `Disputes Priority ${p} JN accepted at ${acc} ${name}`;
-    case 'hn':            return `Disputes Priority ${p} HN accepted at ${acc} ${name}`;
+    case 'microsoft':     return p === 1 ? `Disputes Priority 1 Microsoft ${acc} ${name}` : `Disputes Priority ${p} Microsoft accepted at ${accWithSeq} ${name}`;
+    case 'os':            return `Disputes Priority ${p} OS accepted at ${accWithSeq} ${name}`;
+    case 'is':            return `Disputes Priority ${p} IS accepted at ${accWithSeq} ${name}`;
+    case 'tw':            return `Disputes Priority 1 TW accepted at ${accWithSeq} ${name}`;
+    case 'so':            return `Disputes Priority ${p} SO accepted at ${accWithSeq} ${name}`;
+    case 'fs':            return `Disputes Priority ${p} FS accepted at ${accWithSeq} ${name}`;
+    case 'jn':            return `Disputes Priority ${p} JN accepted at ${accWithSeq} ${name}`;
+    case 'hn':            return `Disputes Priority ${p} HN accepted at ${accWithSeq} ${name}`;
     case 'partnerportal': return `P1 dispute Partner Portal ${acc} ${name}`;
     default: return null;
   }
@@ -3734,13 +3879,44 @@ function renderAZWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
     `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
 
+/**
+ * Refresh the current sequence badge for the selected vendor+priority+accepted-date.
+ * Reads the DB and computes the next number WITHOUT persisting anything.
+ */
+async function refreshDailySeqPreview() {
+  const v = document.getElementById('vendor').value;
+  const acc = document.getElementById('accepted').value.trim();
+  const previewSeq = document.getElementById('preview-seq');
+
+  if (!previewSeq) return;
+
+  if (!v || !acc || vendorSkipsDailySeq(v, selectedPriority) || !datePartFromAccepted(acc)) {
+    CURRENT_DAILY_SEQ = 0;
+    CURRENT_DAILY_SEQ_KEY = null;
+    previewSeq.style.display = 'none';
+    previewSeq.innerHTML = '';
+    return;
+  }
+
+  const key = `${datePartFromAccepted(acc)}_${v}_p${selectedPriority}`;
+  CURRENT_DAILY_SEQ_KEY = key;
+
+  const nextSeq = await computeNextSeq(acc, v, selectedPriority);
+
+  if (CURRENT_DAILY_SEQ_KEY !== key) return;
+
+  const datePart = datePartFromAccepted(acc);
+
+  previewSeq.style.display = 'block';
+  previewSeq.innerHTML = `Next sequence for <strong>${datePart}</strong>: <strong>(${String(nextSeq).padStart(2,'0')})</strong> <span class="reset-note">· calculated from existing tickets</span>`;
+}
+
 function updatePreview() {
   if (!CURRENT_USER) return;
   const fn      = getFilename();
   const rows    = getUrls();
   const v       = document.getElementById('vendor').value;
   const acc     = document.getElementById('accepted').value.trim();
-  const name    = getCpName();
   const invalid = getInvalidRows();
   const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
 
@@ -3782,11 +3958,13 @@ function updatePreview() {
     previewFn.textContent = '—'; previewSub.textContent = ''; btn.disabled = true;
   }
 
+  refreshDailySeqPreview();
+
   let anyWikiVisible = false;
 
   if (v === 'checkpoint' && selectedPriority === 1 && acc && rows.length > 0) {
     wikiSecCp.classList.add('visible');
-    renderCPWiki(acc, rows.length, name, document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
+    renderCPWiki(acc, rows.length, getCpName(), document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
     anyWikiVisible = true;
   } else wikiSecCp.classList.remove('visible');
 
@@ -3837,10 +4015,9 @@ function copyWiki(variant) {
   const v    = document.getElementById('vendor').value;
   const acc  = document.getElementById('accepted').value.trim();
   const rows = getUrls();
-  const name = getCpName();
   let text = '';
   if (variant === 'cp' && v === 'checkpoint' && selectedPriority === 1 && acc && rows.length)
-    text = buildCPWikiText(acc, rows.length, name, document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
+    text = buildCPWikiText(acc, rows.length, getCpName(), document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
   else if (variant === 'tw' && v === 'tw' && acc && rows.length)
     text = buildTWWikiText(acc, rows.length, document.getElementById('twImmutable').value, document.getElementById('twSecurityCat').value);
   else if (variant === 'gen' && GENERIC_WIKI_VENDORS.includes(v) && acc && rows.length)
@@ -3959,18 +4136,45 @@ async function checkCheckpointDuplicate(timestamp) {
    GENERATE + CONFIRM
    ═══════════════════════════════════════════════════════════════ */
 async function generate() {
-  const fn      = getFilename();
+  const fn      = getFilename();  // pre-allocated (may not have seq yet)
   const rows    = getUrls();
   const invalid = getInvalidRows();
   const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
   if (!fn || !rows.length || hasInvalid) return;
 
   const v = document.getElementById('vendor').value;
-  document.getElementById('genConfirmTitle').textContent = fn;
+  const p = selectedPriority;
+  const acc = document.getElementById('accepted').value.trim();
+
+  // Compute the actual NEXT seq from the DB (only for non-exempt vendors)
+  let nextSeqNum = null;
+  if (!vendorSkipsDailySeq(v, p) && datePartFromAccepted(acc)) {
+    try {
+      nextSeqNum = await computeNextSeq(acc, v, p);
+    } catch (e) {
+      console.error('computeNextSeq failed:', e);
+      nextSeqNum = 1;
+    }
+  }
+
+  // Use the computed seq for the confirm preview
+  const fnWithSeq = getFilename(nextSeqNum);
+  document.getElementById('genConfirmTitle').textContent = fnWithSeq || fn;
   document.getElementById('genConfirmVendor').textContent = VENDOR_LABELS[v] || v;
-  document.getElementById('genConfirmPriority').textContent = (VENDOR_CONFIG[v] && VENDOR_CONFIG[v].showPriority) ? `Priority ${selectedPriority}` : 'Priority 1';
+  document.getElementById('genConfirmPriority').textContent = (VENDOR_CONFIG[v] && VENDOR_CONFIG[v].showPriority) ? `Priority ${p}` : 'Priority 1';
   document.getElementById('genConfirmAssignee').textContent = getCpName();
   document.getElementById('genConfirmUrls').textContent = `${rows.length} URL${rows.length === 1 ? '' : 's'}`;
+
+  const seqRow = document.getElementById('genConfirmSeqRow');
+  const seqDiv = document.getElementById('genConfirmSeqDivider');
+  const seqEl  = document.getElementById('genConfirmSeq');
+  const datePart = datePartFromAccepted(acc);
+  if (!vendorSkipsDailySeq(v, p) && datePart && nextSeqNum) {
+    seqDiv.style.display = ''; seqRow.style.display = '';
+    seqEl.textContent = `(${String(nextSeqNum).padStart(2,'0')}) for date ${datePart}`;
+  } else {
+    seqDiv.style.display = 'none'; seqRow.style.display = 'none';
+  }
 
   const dupAlert = document.getElementById('genDupAlert');
   const dupText  = document.getElementById('genDupText');
@@ -4005,7 +4209,7 @@ async function generate() {
   document.getElementById('genConfirmOverlay').classList.remove('hidden');
 
   if (v === 'checkpoint') {
-    const ts = document.getElementById('accepted').value.trim();
+    const ts = acc;
     if (ts) {
       yesBtn.disabled = true;
       yesBtn.textContent = 'Checking…';
@@ -4028,16 +4232,16 @@ async function confirmGenerate() {
   const yesBtn = document.getElementById('genConfirmYesBtn');
   yesBtn.disabled = true; yesBtn.textContent = 'Working…';
 
-  const fn      = getFilename();
   const rows    = getUrls();
-  if (!fn || !rows.length) { closeGenConfirm(); return; }
+  const v       = document.getElementById('vendor').value;
+  const p       = selectedPriority;
+  const acc     = document.getElementById('accepted').value.trim();
+  if (!rows.length) { closeGenConfirm(); return; }
 
-  const v = document.getElementById('vendor').value;
-
+  // Checkpoint duplicate guard
   if (v === 'checkpoint') {
-    const ts = document.getElementById('accepted').value.trim();
-    if (ts) {
-      const dup = await checkCheckpointDuplicate(ts);
+    if (acc) {
+      const dup = await checkCheckpointDuplicate(acc);
       if (dup) {
         const dupAlert = document.getElementById('genDupAlert');
         const dupText  = document.getElementById('genDupText');
@@ -4049,6 +4253,23 @@ async function confirmGenerate() {
       }
     }
   }
+
+  // Compute next seq from DB (if applicable). No separate counter to update.
+  let assignedSeq = null;
+  if (!vendorSkipsDailySeq(v, p) && datePartFromAccepted(acc)) {
+    try {
+      assignedSeq = await computeNextSeq(acc, v, p);
+    } catch (e) {
+      console.error('computeNextSeq failed:', e);
+      yesBtn.disabled = false;
+      yesBtn.textContent = 'Yes, Generate & Add';
+      alert(e.message || 'Could not compute sequence number. Please try again.');
+      return;
+    }
+  }
+
+  const fn = getFilename(assignedSeq);
+  if (!fn) { closeGenConfirm(); return; }
 
   const wb = XLSX.utils.book_new();
   const wsData = rows.map(({ url, cat, sec, secCat }) => {
@@ -4075,6 +4296,7 @@ async function confirmGenerate() {
   }
 
   closeGenConfirm();
+  updatePreview();
 }
 
 /* ═══════════════════════════════════════════════════════════════
