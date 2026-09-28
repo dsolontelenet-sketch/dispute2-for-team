@@ -1031,7 +1031,6 @@
 </head>
 <body>
 
-<!-- AUTH SCREEN -->
 <div class="auth-screen" id="authScreen">
   <div class="auth-shell" id="authShell">
     <div class="auth-brand">
@@ -1103,7 +1102,6 @@
   </div>
 </div>
 
-<!-- AGENT SETUP SCREEN -->
 <div class="agent-setup-screen hidden" id="agentSetupScreen">
   <div class="agent-setup-shell">
     <div class="agent-setup-brand">
@@ -1139,10 +1137,8 @@
   </div>
 </div>
 
-<!-- LOADING -->
 <div class="auth-loading hidden" id="loadingScreen"><div class="spinner"></div><span>Checking session…</span></div>
 
-<!-- MAIN APP -->
 <div class="app-shell hidden" id="mainApp">
 
   <aside class="sidebar" id="sidebar">
@@ -1620,7 +1616,6 @@
   </main>
 </div>
 
-<!-- GENERATE CONFIRM MODAL -->
 <div class="confirm-overlay hidden" id="genConfirmOverlay">
   <div class="confirm-card">
     <h3>Are you sure this is correct dispute?</h3>
@@ -1656,7 +1651,6 @@
   </div>
 </div>
 
-<!-- EMAIL CONFIRM MODAL -->
 <div class="confirm-overlay hidden" id="emailConfirmOverlay">
   <div class="confirm-card">
     <h3>⚠ Are you sure you want to edit your email?</h3>
@@ -1682,7 +1676,6 @@
   </div>
 </div>
 
-<!-- EDIT TICKET MODAL -->
 <div class="confirm-overlay hidden" id="editTicketOverlay">
   <div class="confirm-card">
     <h3>Edit Ticket</h3>
@@ -1728,7 +1721,6 @@
   </div>
 </div>
 
-<!-- DELETE CONFIRM MODAL -->
 <div class="confirm-overlay hidden" id="deleteTicketOverlay">
   <div class="confirm-card">
     <h3>Delete Ticket?</h3>
@@ -1785,9 +1777,6 @@ const monPhotosRef   = monitoringRtdb.ref('profiles/photos');
 const monFirestore         = monitoringApp.firestore();
 const monFirestoreTickets  = monFirestore.collection('tickets');
 
-/* ═══════════════════════════════════════════════════════════════
-   VENDORS THAT DO *NOT* GET A SEQUENCE NUMBER
-   ═══════════════════════════════════════════════════════════════ */
 function vendorSkipsDailySeq(vendor, priority) {
   if (vendor === 'barracuda') return true;
   if (vendor === 'checkpoint' && priority === 1) return true;
@@ -1830,19 +1819,13 @@ function escapeHtml(str) {
 function pad(n) { return String(n).padStart(2, '0'); }
 
 /* ═══════════════════════════════════════════════════════════════
-   SEQUENCE HELPERS
+   SEQUENCE HELPERS (per-agent)
    ═══════════════════════════════════════════════════════════════
-   Sequence number is DERIVED from the actual database records:
-   scan all tickets, filter by (date + vendor + priority) parsed
-   from the title, and use count + 1.
-
-   Deleting a ticket automatically reduces the count, so the next
-   generation will reuse the freed number — no gaps.
+   Sequence number is DERIVED from the actual database records,
+   filtered by (date + vendor + priority + ASSIGNEE = current user).
+   So each agent has their own independent counter for each combo.
 */
 
-/**
- * Extract the YYYYMMDD portion from an accepted-timestamp string.
- */
 function datePartFromAccepted(acc) {
   if (!acc) return '';
   const beforeT = acc.split('T')[0].trim();
@@ -1855,28 +1838,20 @@ function formatDailySeq(n) {
   return `(${String(n).padStart(2, '0')})`;
 }
 
-/**
- * Parse a ticket title to determine if it matches (date, vendor, priority).
- * Expected pattern contains "YYYYMMDD(NN)" and "Priority N" and a vendor label.
- * Returns { datePart, vendor, priority, seqNum } or null.
- */
 function parseTicketIdentity(title) {
   if (!title) return null;
 
-  // Must contain YYYYMMDD(NN)
   const seqMatch = title.match(/(\d{8})\((\d{1,3})\)/);
   if (!seqMatch) return null;
   const datePart = seqMatch[1];
   const seqNum = parseInt(seqMatch[2], 10);
   if (!datePart) return null;
 
-  // Priority: "Priority N"
   const priMatch = title.match(/Priority\s+(\d+)/i);
   if (!priMatch) return null;
   const priority = parseInt(priMatch[1], 10);
   if (!priority) return null;
 
-  // Vendor: match known labels
   let vendor = null;
   for (const [key, label] of Object.entries(VENDOR_LABELS)) {
     if (vendorSkipsDailySeq(key, priority)) continue;
@@ -1889,44 +1864,50 @@ function parseTicketIdentity(title) {
 }
 
 /**
- * Scan ALL tickets in the database and count how many match
- * (date + vendor + priority). Returns { count, maxSeq }.
- *
- * We use maxSeq as the source of truth for "highest existing" —
- * this guarantees no collision even if a title has been edited
- * or if a legacy ticket has a weird seq.
+ * Normalize an agent name for comparison (case-insensitive, trimmed).
  */
-async function countTicketsFor(datePart, vendor, priority) {
+function normName(s) {
+  return (s || '').trim().toLowerCase();
+}
+
+/**
+ * Scan ALL tickets in the DB and count how many match
+ * (date + vendor + priority + agentName).
+ *
+ * @param {string} datePart  e.g. "20260928"
+ * @param {string} vendor    e.g. "os"
+ * @param {number} priority  e.g. 2
+ * @param {string} agentName e.g. "Diovic"
+ */
+async function countTicketsFor(datePart, vendor, priority, agentName) {
   let count = 0;
   let maxSeq = 0;
+  const targetAgent = normName(agentName);
+
+  const testMatch = (t) => {
+    if (!t) return;
+    const parsed = parseTicketIdentity(t.title);
+    if (!parsed) return;
+    if (parsed.datePart !== datePart) return;
+    if (parsed.vendor !== vendor) return;
+    if (parsed.priority !== priority) return;
+    // Filter by assignee — per-agent counter
+    if (normName(t.assignee) !== targetAgent) return;
+    count++;
+    if (parsed.seqNum > maxSeq) maxSeq = parsed.seqNum;
+  };
 
   try {
-    // RTDB tickets
     const rtdbSnap = await monTicketsRef.once('value');
     const rtdbRaw = rtdbSnap.val() || {};
-    Object.keys(rtdbRaw).forEach(k => {
-      const t = rtdbRaw[k];
-      const parsed = parseTicketIdentity(t && t.title);
-      if (parsed && parsed.datePart === datePart && parsed.vendor === vendor && parsed.priority === priority) {
-        count++;
-        if (parsed.seqNum > maxSeq) maxSeq = parsed.seqNum;
-      }
-    });
+    Object.keys(rtdbRaw).forEach(k => testMatch(rtdbRaw[k]));
   } catch (e) {
     console.warn('RTDB count failed:', e);
   }
 
   try {
-    // Firestore tickets
     const fsSnap = await monFirestoreTickets.get();
-    fsSnap.forEach(doc => {
-      const t = doc.data() || {};
-      const parsed = parseTicketIdentity(t.title);
-      if (parsed && parsed.datePart === datePart && parsed.vendor === vendor && parsed.priority === priority) {
-        count++;
-        if (parsed.seqNum > maxSeq) maxSeq = parsed.seqNum;
-      }
-    });
+    fsSnap.forEach(doc => testMatch(doc.data() || {}));
   } catch (e) {
     console.warn('Firestore count failed:', e);
   }
@@ -1935,37 +1916,16 @@ async function countTicketsFor(datePart, vendor, priority) {
 }
 
 /**
- * Compute the NEXT sequence number for (accepted-date, vendor, priority).
- *
- * Rule: next = max(maxSeq, count) + 1
- *   - If tickets are 01, 02, 03 → count=3, maxSeq=3 → next=04
- *   - If ticket 02 was deleted, remaining 01, 03 → count=2, maxSeq=3 → next=04
- *     (we keep maxSeq as source-of-truth so we don't accidentally collide with 03)
- *   - If all deleted → count=0, maxSeq=0 → next=01
- *
- * Note: If you want strict gap-filling on delete, we would need a
- * different strategy (e.g. reuse the smallest free number). The spec
- * asked "recalculate from current records so there are no gaps" —
- * we interpret that as: when the latest is deleted, the number is
- * reused. To reuse ANY gap (not just the tail), change next below
- * to `smallestMissing` (see comment).
+ * Compute next sequence number for (accepted-date, vendor, priority, agentName).
+ * Per-agent: each agent has their own counter for each combo.
  */
-async function computeNextSeq(acc, vendor, priority) {
+async function computeNextSeq(acc, vendor, priority, agentName) {
   const datePart = datePartFromAccepted(acc);
   if (!datePart) return 1;
 
-  const { count, maxSeq } = await countTicketsFor(datePart, vendor, priority);
-
-  // Reuse the tail: next = maxSeq + 1. Deleting (NN) where NN===maxSeq
-  // will free that slot on the NEXT generation because maxSeq drops.
+  const { count, maxSeq } = await countTicketsFor(datePart, vendor, priority, agentName);
   const next = Math.max(maxSeq, count) + 1;
   return next;
-
-  // ── For strict "fill any gap" behavior, replace the above with: ──
-  // const used = new Set();
-  // (populate used with all parsed.seqNum for this key)
-  // let n = 1; while (used.has(n)) n++;
-  // return n;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3262,9 +3222,6 @@ window.saveEditTicket = async function () {
       await monFirestoreTickets.doc(docId).update(updatePayload);
     }
     closeEditTicket();
-
-    // If the open form key matches, refresh preview (title edit doesn't
-    // change seq, but it's harmless to refresh).
     updatePreview();
   } catch (err) {
     console.error('Save failed:', err);
@@ -3308,10 +3265,6 @@ window.confirmDeleteTicket = async function () {
       if (docId) await monFirestoreTickets.doc(docId).delete();
     }
     closeDeleteTicket();
-
-    // The next sequence number is computed fresh from the DB every
-    // time, so nothing else to do here. Just refresh the preview
-    // so the user sees the freed number immediately.
     updatePreview();
   } catch (err) {
     console.error('Delete failed:', err);
@@ -3880,8 +3833,7 @@ function renderAZWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
 }
 
 /**
- * Refresh the current sequence badge for the selected vendor+priority+accepted-date.
- * Reads the DB and computes the next number WITHOUT persisting anything.
+ * Refresh the sequence preview — now PER-AGENT.
  */
 async function refreshDailySeqPreview() {
   const v = document.getElementById('vendor').value;
@@ -3898,17 +3850,18 @@ async function refreshDailySeqPreview() {
     return;
   }
 
-  const key = `${datePartFromAccepted(acc)}_${v}_p${selectedPriority}`;
+  const agentName = getCpName();
+  const key = `${datePartFromAccepted(acc)}_${v}_p${selectedPriority}_${normName(agentName)}`;
   CURRENT_DAILY_SEQ_KEY = key;
 
-  const nextSeq = await computeNextSeq(acc, v, selectedPriority);
+  const nextSeq = await computeNextSeq(acc, v, selectedPriority, agentName);
 
   if (CURRENT_DAILY_SEQ_KEY !== key) return;
 
   const datePart = datePartFromAccepted(acc);
 
   previewSeq.style.display = 'block';
-  previewSeq.innerHTML = `Next sequence for <strong>${datePart}</strong>: <strong>(${String(nextSeq).padStart(2,'0')})</strong> <span class="reset-note">· calculated from existing tickets</span>`;
+  previewSeq.innerHTML = `Next sequence for <strong>${datePart}</strong> · agent <strong>${escapeHtml(agentName)}</strong>: <strong>(${String(nextSeq).padStart(2,'0')})</strong> <span class="reset-note">· calculated from your own tickets only</span>`;
 }
 
 function updatePreview() {
@@ -4039,7 +3992,7 @@ function copyWiki(variant) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TICKET PUSH (with rotation advance)
+   TICKET PUSH
    ═══════════════════════════════════════════════════════════════ */
 function todayKey() {
   const d = new Date();
@@ -4136,7 +4089,7 @@ async function checkCheckpointDuplicate(timestamp) {
    GENERATE + CONFIRM
    ═══════════════════════════════════════════════════════════════ */
 async function generate() {
-  const fn      = getFilename();  // pre-allocated (may not have seq yet)
+  const fn      = getFilename();
   const rows    = getUrls();
   const invalid = getInvalidRows();
   const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
@@ -4145,24 +4098,23 @@ async function generate() {
   const v = document.getElementById('vendor').value;
   const p = selectedPriority;
   const acc = document.getElementById('accepted').value.trim();
+  const agentName = getCpName();
 
-  // Compute the actual NEXT seq from the DB (only for non-exempt vendors)
   let nextSeqNum = null;
   if (!vendorSkipsDailySeq(v, p) && datePartFromAccepted(acc)) {
     try {
-      nextSeqNum = await computeNextSeq(acc, v, p);
+      nextSeqNum = await computeNextSeq(acc, v, p, agentName);
     } catch (e) {
       console.error('computeNextSeq failed:', e);
       nextSeqNum = 1;
     }
   }
 
-  // Use the computed seq for the confirm preview
   const fnWithSeq = getFilename(nextSeqNum);
   document.getElementById('genConfirmTitle').textContent = fnWithSeq || fn;
   document.getElementById('genConfirmVendor').textContent = VENDOR_LABELS[v] || v;
   document.getElementById('genConfirmPriority').textContent = (VENDOR_CONFIG[v] && VENDOR_CONFIG[v].showPriority) ? `Priority ${p}` : 'Priority 1';
-  document.getElementById('genConfirmAssignee').textContent = getCpName();
+  document.getElementById('genConfirmAssignee').textContent = agentName;
   document.getElementById('genConfirmUrls').textContent = `${rows.length} URL${rows.length === 1 ? '' : 's'}`;
 
   const seqRow = document.getElementById('genConfirmSeqRow');
@@ -4171,7 +4123,7 @@ async function generate() {
   const datePart = datePartFromAccepted(acc);
   if (!vendorSkipsDailySeq(v, p) && datePart && nextSeqNum) {
     seqDiv.style.display = ''; seqRow.style.display = '';
-    seqEl.textContent = `(${String(nextSeqNum).padStart(2,'0')}) for date ${datePart}`;
+    seqEl.textContent = `(${String(nextSeqNum).padStart(2,'0')}) for ${datePart} · per-agent (${agentName})`;
   } else {
     seqDiv.style.display = 'none'; seqRow.style.display = 'none';
   }
@@ -4236,9 +4188,9 @@ async function confirmGenerate() {
   const v       = document.getElementById('vendor').value;
   const p       = selectedPriority;
   const acc     = document.getElementById('accepted').value.trim();
+  const agentName = getCpName();
   if (!rows.length) { closeGenConfirm(); return; }
 
-  // Checkpoint duplicate guard
   if (v === 'checkpoint') {
     if (acc) {
       const dup = await checkCheckpointDuplicate(acc);
@@ -4254,11 +4206,10 @@ async function confirmGenerate() {
     }
   }
 
-  // Compute next seq from DB (if applicable). No separate counter to update.
   let assignedSeq = null;
   if (!vendorSkipsDailySeq(v, p) && datePartFromAccepted(acc)) {
     try {
-      assignedSeq = await computeNextSeq(acc, v, p);
+      assignedSeq = await computeNextSeq(acc, v, p, agentName);
     } catch (e) {
       console.error('computeNextSeq failed:', e);
       yesBtn.disabled = false;
@@ -4299,9 +4250,6 @@ async function confirmGenerate() {
   updatePreview();
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   GLOBAL HOOKS
-   ═══════════════════════════════════════════════════════════════ */
 window.DISPUTES_APP = {
   getCurrentUser: () => CURRENT_USER,
   getMyTickets:   () => MY_TICKETS,
