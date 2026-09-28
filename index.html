@@ -105,6 +105,37 @@
   .auth-msg.ok { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.28); color: var(--success); }
   .auth-footer { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.7rem; color: var(--muted); line-height: 1.55; }
 
+  /* ═══ GOOGLE BUTTON ═══ */
+  .google-btn {
+    width: 100%; padding: 0.85rem;
+    background: #ffffff; border: 1px solid #dadce0;
+    border-radius: 10px; color: #3c4043;
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    font-weight: 600; font-size: 0.85rem;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 0.7rem;
+    margin-top: 0.5rem;
+  }
+  .google-btn:hover:not(:disabled) {
+    background: #f8f9fa;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+  }
+  .google-btn:active:not(:disabled) { transform: translateY(0); }
+  .google-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .google-btn svg { flex-shrink: 0; }
+
+  .auth-divider {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin: 1.25rem 0 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.12em;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
   .agent-picker-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
   .agent-picker-wrap { border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem; background: var(--bg-elev); max-height: 260px; overflow-y: auto; }
   .agent-picker-loading, .agent-picker-empty {
@@ -145,6 +176,60 @@
   .spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--accent); animation: spin 0.75s linear infinite; }
   .auth-loading .spinner { width: 32px; height: 32px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ═══ AGENT SETUP SCREEN (post-Google login) ═══ */
+  .agent-setup-screen {
+    width: 100%; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .agent-setup-screen.hidden { display: none; }
+  .agent-setup-shell {
+    width: 100%; max-width: 560px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px; box-shadow: 0 32px 100px rgba(0,0,0,0.5);
+    overflow: hidden; display: flex; flex-direction: column;
+    max-height: calc(100vh - 4rem);
+  }
+  .agent-setup-brand {
+    padding: 2rem 2rem 1.5rem; text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,255,0.04), transparent);
+  }
+  .agent-setup-brand .logo {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700;
+    font-size: 1.5rem; color: #0a0c11; margin-bottom: 0.85rem;
+    box-shadow: 0 8px 24px rgba(0,212,255,0.25);
+  }
+  .agent-setup-brand h1 {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem;
+    color: var(--text); letter-spacing: 0.08em; text-transform: uppercase;
+    font-weight: 600; margin-bottom: 0.35rem;
+  }
+  .agent-setup-brand p { font-size: 0.76rem; color: var(--muted); }
+  .agent-setup-body { padding: 1.75rem 2rem 2rem; overflow-y: auto; flex: 1; }
+  .agent-setup-body::-webkit-scrollbar { width: 6px; }
+  .agent-setup-body::-webkit-scrollbar-thumb { background: var(--border-soft); border-radius: 3px; }
+  .agent-setup-user {
+    display: flex; align-items: center; gap: 0.75rem;
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 0.9rem;
+    margin-bottom: 1.25rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .agent-setup-user .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    color: #0a0c11; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.8rem; flex-shrink: 0; overflow: hidden;
+  }
+  .agent-setup-user .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .agent-setup-user .meta { min-width: 0; flex: 1; }
+  .agent-setup-user .meta .nm { color: var(--text); font-weight: 600; font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .agent-setup-user .meta .em { color: var(--muted); font-size: 0.66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 0.15rem; }
 
   /* ═══ APP SHELL ═══ */
   .app-shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100vh; width: 100%; }
@@ -709,6 +794,50 @@
   .pwd-msg.error { background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.28); color: #ff8a8a; }
   .pwd-msg.ok { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.28); color: var(--success); }
 
+  /* ═══ EMAIL FORM ═══ */
+  .email-form {
+    display: flex; flex-direction: column; gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  .email-field { display: flex; flex-direction: column; gap: 0.42rem; }
+  .email-field label {
+    display: block; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; margin-bottom: 0;
+  }
+  .email-input-wrap { position: relative; }
+  .email-input-wrap input {
+    width: 100%; background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 9px; padding: 0.75rem 0.95rem;
+    color: var(--text); font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem; outline: none; transition: all 0.15s;
+  }
+  .email-input-wrap input:focus { border-color: var(--accent); background: var(--bg); box-shadow: 0 0 0 3px rgba(0,212,255,0.08); }
+  .email-input-wrap input::placeholder { color: var(--muted); opacity: 0.65; }
+  .email-hint {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; color: var(--muted);
+    line-height: 1.55; margin-top: 0.3rem;
+  }
+  .email-submit {
+    width: 100%; margin-top: 0.5rem; padding: 0.85rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    border: none; border-radius: 10px; color: #0a0c11;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 0.82rem;
+    letter-spacing: 0.08em; cursor: pointer; transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .email-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(0,212,255,0.32); }
+  .email-submit:disabled { background: var(--panel-2); color: var(--muted); cursor: not-allowed; }
+  .email-msg {
+    display: none; margin-top: 0.75rem; padding: 0.7rem 0.9rem;
+    border-radius: 8px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; line-height: 1.55;
+  }
+  .email-msg.visible { display: block; }
+  .email-msg.error { background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.28); color: #ff8a8a; }
+  .email-msg.ok { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.28); color: var(--success); }
+
   /* ═══ CONFIRM MODAL ═══ */
   .confirm-overlay { position: fixed; inset: 0; background: rgba(5,6,10,0.85); display: flex; align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(6px); padding: 1.5rem; overflow-y: auto; }
   .confirm-overlay.hidden { display: none; }
@@ -806,7 +935,6 @@
     .tk-stats { grid-template-columns: repeat(2, 1fr); }
     .tk-search { width: 100%; min-width: 0; }
     .set-row { flex-wrap: wrap; }
-    /* Table responsive: hide date/time columns on mobile */
     .tk-table thead th.col-date,
     .tk-table thead th.col-time { display: none; }
     .tk-table tbody td.td-date,
@@ -853,6 +981,49 @@
   0%, 100% { border-color: rgba(255, 184, 77, 0.35); }
   50%      { border-color: rgba(255, 184, 77, 0.7);  }
 }
+
+/* ═══ EMAIL CONFIRM MODAL ═══ */
+.email-confirm-input {
+  width: 100%;
+  background: var(--bg-elev);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+  transition: all 0.15s;
+  margin-bottom: 0.75rem;
+}
+.email-confirm-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(0,212,255,0.1);
+}
+.email-confirm-input.valid {
+  border-color: var(--success);
+  color: var(--success);
+}
+.email-confirm-input.invalid {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.email-confirm-hint {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 1rem;
+  letter-spacing: 0.04em;
+}
+.email-confirm-hint strong {
+  color: var(--accent);
+  font-weight: 700;
+}
 </style>
 </head>
 <body>
@@ -872,7 +1043,6 @@
     <div class="auth-body">
       <div id="loginForm">
 
- <!-- ⬇️ ADD THIS BLOCK ⬇️ -->
   <div class="update-notice">
     <span class="notice-icon">⚠</span>
     <div>
@@ -881,11 +1051,19 @@
       Please click <span class="notice-link" onclick="setAuthTab('register')">Register</span> above to create a new account.
     </div>
   </div>
-  <!-- ⬆️ ADD THIS BLOCK ⬆️ -->
 
+        <!-- ═══ GOOGLE SIGN-IN ═══ -->
+        <button type="button" class="google-btn" id="googleSignInBtn" onclick="doGoogleLogin()">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"></path>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18L12.048 13.5c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"></path>
+            <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"></path>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"></path>
+          </svg>
+          Continue with Google
+        </button>
 
-
-
+        <div class="auth-divider">or continue with email</div>
 
         <div class="auth-field">
           <label>Email Address</label>
@@ -919,6 +1097,42 @@
       </div>
 
       <div class="auth-msg" id="authMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- AGENT SETUP SCREEN (after Google sign-in for new users) -->
+<div class="agent-setup-screen hidden" id="agentSetupScreen">
+  <div class="agent-setup-shell">
+    <div class="agent-setup-brand">
+      <div class="logo">D</div>
+      <h1>Choose Your Agent</h1>
+      <p>One last step — link your account to your Monitoring agent profile</p>
+    </div>
+    <div class="agent-setup-body">
+      <div class="agent-setup-user">
+        <div class="avatar" id="agentSetupAvatar">?</div>
+        <div class="meta">
+          <div class="nm" id="agentSetupName">—</div>
+          <div class="em" id="agentSetupEmail">—</div>
+        </div>
+      </div>
+
+      <div class="agent-picker-head">
+        <label style="margin-bottom:0;">Select Your Agent</label>
+        <span style="font-size:0.6rem; color:var(--muted); font-family:'IBM Plex Mono',monospace; letter-spacing:0.05em;">FROM MONITORING</span>
+      </div>
+      <div class="agent-picker-wrap">
+        <div id="agentSetupPickerContent" class="agent-picker-loading"><div class="spinner"></div><span>Loading agents…</span></div>
+      </div>
+      <p class="agent-picker-hint" id="agentSetupHint">Pick the agent profile that belongs to you. This cannot be undone without contacting an admin.</p>
+
+      <button class="auth-submit" id="agentSetupConfirmBtn" onclick="confirmAgentSetup()" disabled>Confirm &amp; Continue</button>
+      <div class="auth-msg" id="agentSetupMsg"></div>
+      <div class="auth-footer">
+        Signed in as <strong id="agentSetupEmailFooter" style="color:var(--accent);">—</strong> ·
+        <span class="notice-link" onclick="doLogout()" style="cursor:pointer;">Sign out</span>
+      </div>
     </div>
   </div>
 </div>
@@ -1289,6 +1503,24 @@
           </div>
 
           <div class="set-card">
+            <h3>Change Email</h3>
+            <p class="set-sub">Update your account email address. You'll need to confirm this change.</p>
+
+            <form class="email-form" id="emailForm" onsubmit="event.preventDefault(); promptEmailChange();">
+              <div class="email-field">
+                <label>New Email Address</label>
+                <div class="email-input-wrap">
+                  <input type="email" id="newEmailInput" placeholder="newemail@example.com" autocomplete="email" />
+                </div>
+                <p class="email-hint">Enter the new email you want to use for signing in.</p>
+              </div>
+
+              <button type="submit" class="email-submit" id="emailSubmitBtn">Update Email</button>
+              <div class="email-msg" id="emailMsg"></div>
+            </form>
+          </div>
+
+          <div class="set-card">
             <h3>Change Password</h3>
             <p class="set-sub">Enter your current password to set a new one</p>
 
@@ -1424,6 +1656,32 @@
   </div>
 </div>
 
+<!-- EMAIL CONFIRM MODAL -->
+<div class="confirm-overlay hidden" id="emailConfirmOverlay">
+  <div class="confirm-card">
+    <h3>⚠ Are you sure you want to edit your email?</h3>
+    <p>This will change the email you use to sign in. Make sure you have access to the new email address.</p>
+
+    <div class="gen-confirm-info">
+      <div class="row"><span class="lbl">Current Email</span><span class="val" id="emailConfirmCurrent">—</span></div>
+      <div class="divider-sm"></div>
+      <div class="row"><span class="lbl">New Email</span><span class="val accent" id="emailConfirmNew">—</span></div>
+    </div>
+
+    <p style="font-size:0.74rem;color:var(--text-soft);margin-bottom:0.7rem;text-align:center;">
+      Type <strong style="color:var(--accent);font-family:'IBM Plex Mono',monospace;letter-spacing:0.1em;">YES</strong> below to confirm:
+    </p>
+
+    <input type="text" class="email-confirm-input" id="emailConfirmInput" placeholder="Type YES" autocomplete="off" oninput="validateEmailConfirmInput()" />
+    <div class="email-confirm-hint" id="emailConfirmHint">Enter <strong>YES</strong> (uppercase) to enable confirmation</div>
+
+    <div class="confirm-actions">
+      <button class="confirm-btn cancel" onclick="closeEmailConfirm()">No, Go Back</button>
+      <button class="confirm-btn primary" id="emailConfirmYesBtn" onclick="confirmEmailChange()" disabled>Yes, Update Email</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT TICKET MODAL -->
 <div class="confirm-overlay hidden" id="editTicketOverlay">
   <div class="confirm-card">
@@ -1542,6 +1800,10 @@ let rotationListenerStarted = false;
 
 let editingTicketKey = null;
 let deletingTicketKey = null;
+
+// Pending Google user awaiting agent selection
+let PENDING_GOOGLE_USER = null;
+let PENDING_AGENT_CHOICE = null;
 
 /* ═══════════════════════════════════════════════════════════════
    UTILITIES
@@ -1698,18 +1960,25 @@ function hideAuthMsg() {
 function setAuthBusy(busy, which) {
   const loginBtn = document.getElementById('loginBtn');
   const regBtn   = document.getElementById('registerBtn');
+  const gBtn     = document.getElementById('googleSignInBtn');
   if (which === 'login') { loginBtn.disabled = busy; loginBtn.textContent = busy ? 'Signing in…' : 'Sign In'; }
   else if (which === 'register') { regBtn.disabled = busy; regBtn.textContent = busy ? 'Creating account…' : 'Create Account'; }
-  else { loginBtn.disabled = busy; regBtn.disabled = busy; }
+  else if (which === 'google') { if (gBtn) gBtn.disabled = busy; }
+  else { loginBtn.disabled = busy; regBtn.disabled = busy; if (gBtn) gBtn.disabled = busy; }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   AGENT PICKER
+   AGENT PICKER (shared between register + google setup)
    ═══════════════════════════════════════════════════════════════ */
 let AGENTS_LIST = [];
 let CLAIMED_AGENTS = {};
 let SELECTED_AGENT = null;
 let agentsLoaded = false;
+
+// For the post-Google agent setup screen
+let SETUP_AGENTS_LIST = [];
+let SETUP_CLAIMED_AGENTS = {};
+let SETUP_SELECTED_AGENT = null;
 
 async function loadAgentPicker(force) {
   const content = document.getElementById('agentPickerContent');
@@ -1718,38 +1987,9 @@ async function loadAgentPicker(force) {
   content.className = 'agent-picker-loading';
   content.innerHTML = `<div class="spinner"></div><span>Loading agents…</span>`;
   try {
-    const [profilesSnap, photosSnap] = await Promise.all([
-      monProfilesRef.once('value'),
-      monPhotosRef.once('value')
-    ]);
-    let claimsSnap = null;
-    try { claimsSnap = await db.collection('agentClaims').get(); }
-    catch (claimsErr) { console.warn('agentClaims fetch failed:', claimsErr); }
-
-    const profiles = profilesSnap.val() || {};
-    const photos   = photosSnap.val()   || {};
-    const photoByName = {};
-    Object.keys(photos).forEach(k => { if (photos[k]) photoByName[k] = photos[k]; });
-
-    CLAIMED_AGENTS = {};
-    if (claimsSnap) claimsSnap.forEach(doc => { CLAIMED_AGENTS[doc.id] = doc.data() || {}; });
-
-    const names = new Set();
-    Object.keys(profiles).forEach(k => { const p = profiles[k]; if (p && p.name) names.add(p.name); });
-
-    AGENTS_LIST = [...names].map(n => {
-      const key = encodeNameKey(n);
-      return {
-        name: n,
-        role: (profiles[key] && profiles[key].role) || '',
-        photo: photoByName[key] || null,
-        key,
-        claimed: !!CLAIMED_AGENTS[key]
-      };
-    }).sort((a, b) => {
-      if (a.claimed !== b.claimed) return a.claimed ? 1 : -1;
-      return a.name.localeCompare(b.name);
-    });
+    const data = await fetchAgentsAndClaims();
+    AGENTS_LIST = data.agents;
+    CLAIMED_AGENTS = data.claims;
 
     agentsLoaded = true;
     if (!AGENTS_LIST.length) {
@@ -1763,6 +2003,43 @@ async function loadAgentPicker(force) {
     content.className = 'agent-picker-empty';
     content.innerHTML = `Could not load agents.<br><span style="color:var(--danger)">${escapeHtml(err.message || String(err))}</span>`;
   }
+}
+
+async function fetchAgentsAndClaims() {
+  const [profilesSnap, photosSnap] = await Promise.all([
+    monProfilesRef.once('value'),
+    monPhotosRef.once('value')
+  ]);
+  let claimsSnap = null;
+  try { claimsSnap = await db.collection('agentClaims').get(); }
+  catch (claimsErr) { console.warn('agentClaims fetch failed:', claimsErr); }
+
+  const profiles = profilesSnap.val() || {};
+  const photos   = photosSnap.val()   || {};
+  const photoByName = {};
+  Object.keys(photos).forEach(k => { if (photos[k]) photoByName[k] = photos[k]; });
+
+  const claims = {};
+  if (claimsSnap) claimsSnap.forEach(doc => { claims[doc.id] = doc.data() || {}; });
+
+  const names = new Set();
+  Object.keys(profiles).forEach(k => { const p = profiles[k]; if (p && p.name) names.add(p.name); });
+
+  const agents = [...names].map(n => {
+    const key = encodeNameKey(n);
+    return {
+      name: n,
+      role: (profiles[key] && profiles[key].role) || '',
+      photo: photoByName[key] || null,
+      key,
+      claimed: !!claims[key]
+    };
+  }).sort((a, b) => {
+    if (a.claimed !== b.claimed) return a.claimed ? 1 : -1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return { agents, claims };
 }
 
 function renderAgentPicker() {
@@ -1798,6 +2075,241 @@ function pickAgent(name) {
   hideAuthMsg();
   renderAgentPicker();
   document.getElementById('agentPickerHint').innerHTML = `Selected: <strong>${escapeHtml(name)}</strong> — this name will appear in filenames and tickets.`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AGENT SETUP PICKER (post-Google login)
+   ═══════════════════════════════════════════════════════════════ */
+async function loadSetupAgentPicker() {
+  const content = document.getElementById('agentSetupPickerContent');
+  if (!content) return;
+  content.className = 'agent-picker-loading';
+  content.innerHTML = `<div class="spinner"></div><span>Loading agents…</span>`;
+  try {
+    const data = await fetchAgentsAndClaims();
+    SETUP_AGENTS_LIST = data.agents;
+    SETUP_CLAIMED_AGENTS = data.claims;
+
+    if (!SETUP_AGENTS_LIST.length) {
+      content.className = 'agent-picker-empty';
+      content.innerHTML = `No agent profiles found.<br>Ask an admin to add agents in Monitoring first.`;
+      return;
+    }
+    renderSetupAgentPicker();
+  } catch (err) {
+    console.error('Failed to load agents:', err);
+    content.className = 'agent-picker-empty';
+    content.innerHTML = `Could not load agents.<br><span style="color:var(--danger)">${escapeHtml(err.message || String(err))}</span>`;
+  }
+}
+
+function renderSetupAgentPicker() {
+  const content = document.getElementById('agentSetupPickerContent');
+  if (!content || !SETUP_AGENTS_LIST.length) return;
+  content.className = 'agent-picker-grid';
+  content.innerHTML = SETUP_AGENTS_LIST.map(a => {
+    const sel = a.name === SETUP_SELECTED_AGENT && !a.claimed ? 'selected' : '';
+    const lockedCls = a.claimed ? 'locked' : '';
+    const ava = a.photo
+      ? `<span class="ava"><img src="${a.photo}" alt=""/></span>`
+      : `<span class="ava">${escapeHtml(initials(a.name) || '?')}</span>`;
+    const lockBadge = a.claimed ? `<span class="lock-badge" title="Already taken">🔒</span>` : '';
+    const tick      = a.claimed ? '' : `<span class="tick">✓</span>`;
+    const subline   = a.claimed
+      ? `Taken${SETUP_CLAIMED_AGENTS[a.key] && SETUP_CLAIMED_AGENTS[a.key].email ? ' · ' + escapeHtml(SETUP_CLAIMED_AGENTS[a.key].email.split('@')[0]) : ''}`
+      : (a.role ? escapeHtml(a.role) : '—');
+    const onclick = a.claimed ? '' : `onclick="pickSetupAgent('${a.name.replace(/'/g, "\\'")}')"`;
+    return `<div class="agent-pick-item ${sel} ${lockedCls}" ${onclick}>
+      ${tick}${lockBadge}${ava}
+      <div class="info"><div class="nm">${escapeHtml(a.name)}</div><div class="rl">${subline}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function pickSetupAgent(name) {
+  const key = encodeNameKey(name);
+  if (SETUP_CLAIMED_AGENTS[key]) {
+    showSetupMsg(`This agent "${name}" is already linked to another account. Pick a different one.`, 'error');
+    return;
+  }
+  SETUP_SELECTED_AGENT = name;
+  hideSetupMsg();
+  renderSetupAgentPicker();
+  document.getElementById('agentSetupHint').innerHTML = `Selected: <strong>${escapeHtml(name)}</strong> — click Confirm to link this agent to your Google account.`;
+  document.getElementById('agentSetupConfirmBtn').disabled = false;
+}
+
+function showSetupMsg(text, type) {
+  const el = document.getElementById('agentSetupMsg');
+  el.textContent = text;
+  el.className = 'auth-msg visible ' + (type || 'error');
+}
+function hideSetupMsg() {
+  const el = document.getElementById('agentSetupMsg');
+  el.className = 'auth-msg';
+  el.textContent = '';
+}
+
+function showAgentSetupScreen(user) {
+  PENDING_GOOGLE_USER = user;
+  PENDING_AGENT_CHOICE = null;
+  SETUP_SELECTED_AGENT = null;
+
+  // Populate user info
+  const nameEl = document.getElementById('agentSetupName');
+  const emailEl = document.getElementById('agentSetupEmail');
+  const emailFooter = document.getElementById('agentSetupEmailFooter');
+  const avEl = document.getElementById('agentSetupAvatar');
+
+  const displayName = user.displayName || (user.email || '').split('@')[0] || 'User';
+  if (nameEl) nameEl.textContent = displayName;
+  if (emailEl) emailEl.textContent = user.email || '—';
+  if (emailFooter) emailFooter.textContent = user.email || '—';
+
+  const photoURL = user.photoURL;
+  if (avEl) {
+    if (photoURL) {
+      avEl.innerHTML = `<img src="${photoURL}" alt=""/>`;
+      avEl.style.background = 'transparent';
+    } else {
+      avEl.textContent = initials(displayName);
+      avEl.style.background = '';
+    }
+  }
+
+  document.getElementById('agentSetupConfirmBtn').disabled = true;
+  hideSetupMsg();
+
+  // Show screen
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('agentSetupScreen').classList.remove('hidden');
+
+  loadSetupAgentPicker();
+}
+
+async function confirmAgentSetup() {
+  if (!PENDING_GOOGLE_USER) return;
+  if (!SETUP_SELECTED_AGENT) {
+    showSetupMsg('Please select an agent first.');
+    return;
+  }
+
+  const btn = document.getElementById('agentSetupConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Linking…';
+  hideSetupMsg();
+
+  const user = PENDING_GOOGLE_USER;
+  const agentKey = encodeNameKey(SETUP_SELECTED_AGENT);
+
+  // Re-check the claim hasn't been taken
+  try {
+    const claimDoc = await db.collection('agentClaims').doc(agentKey).get();
+    if (claimDoc.exists && claimDoc.data().uid !== user.uid) {
+      SETUP_CLAIMED_AGENTS[agentKey] = claimDoc.data();
+      renderSetupAgentPicker();
+      SETUP_SELECTED_AGENT = null;
+      btn.disabled = true;
+      btn.textContent = 'Confirm & Continue';
+      showSetupMsg(`Agent "${SETUP_SELECTED_AGENT || ''}" was just taken. Pick a different one.`, 'error');
+      return;
+    }
+  } catch (e) {}
+
+  const claimRef = db.collection('agentClaims').doc(agentKey);
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(claimRef);
+      if (snap.exists && snap.data().uid !== user.uid) {
+        throw new Error('AGENT_ALREADY_CLAIMED');
+      }
+      tx.set(claimRef, {
+        agentName: SETUP_SELECTED_AGENT,
+        uid:       user.uid,
+        email:     user.email,
+        claimedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    });
+
+    await db.collection('disputeUsers').doc(user.uid).set({
+      name: user.displayName || (user.email || '').split('@')[0] || 'User',
+      email: user.email,
+      agentName: SETUP_SELECTED_AGENT,
+      authProvider: 'google',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    // Success — reload auth state so onAuthStateChanged picks up the profile
+    btn.textContent = 'Done!';
+    setTimeout(() => {
+      document.getElementById('agentSetupScreen').classList.add('hidden');
+      // Trigger auth refresh by reloading the user profile
+      if (auth.currentUser) {
+        auth.currentUser.reload().then(() => {
+          // Manually re-run the auth state flow
+          window.location.reload();
+        });
+      }
+    }, 500);
+  } catch (err) {
+    console.error('Agent setup failed:', err);
+    btn.disabled = false;
+    btn.textContent = 'Confirm & Continue';
+    if (err.message === 'AGENT_ALREADY_CLAIMED') {
+      SETUP_SELECTED_AGENT = null;
+      renderSetupAgentPicker();
+      showSetupMsg('That agent was just claimed. Please pick a different one.', 'error');
+    } else {
+      showSetupMsg(`Could not link agent: ${err.message || err}`, 'error');
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GOOGLE SIGN-IN
+   ═══════════════════════════════════════════════════════════════ */
+async function doGoogleLogin() {
+  hideAuthMsg();
+  const provider = new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+
+  setAuthBusy(true, 'google');
+  try {
+    const result = await auth.signInWithPopup(provider);
+    // onAuthStateChanged will handle routing.
+    // If user has no disputeUsers doc, we'll show agent setup there.
+    console.log('Google sign-in successful:', result.user.email);
+  } catch (err) {
+    console.error('Google sign-in error:', err);
+    const code = err && err.code ? err.code : '';
+    let msg;
+    switch (code) {
+      case 'auth/account-exists-with-different-credential':
+        msg = 'An account already exists with this email using a different sign-in method. Try email/password sign-in.';
+        break;
+      case 'auth/popup-closed-by-user':
+        msg = 'Sign-in popup was closed before completing.';
+        break;
+      case 'auth/popup-blocked':
+        msg = 'Pop-up was blocked by your browser. Please allow pop-ups for this site.';
+        break;
+      case 'auth/cancelled-popup-request':
+        msg = 'Sign-in was cancelled.';
+        break;
+      case 'auth/network-request-failed':
+        msg = 'Network error. Check your connection.';
+        break;
+      case 'auth/operation-not-allowed':
+        msg = 'Google sign-in is not enabled. Contact an admin.';
+        break;
+      default:
+        msg = (err && err.message) ? err.message : 'Google sign-in failed.';
+    }
+    showAuthMsg(msg, 'error');
+    setAuthBusy(false, 'google');
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1873,6 +2385,7 @@ async function doRegister() {
 
     await db.collection('disputeUsers').doc(createdUser.uid).set({
       name, email, agentName: SELECTED_AGENT,
+      authProvider: 'password',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
   } catch (err) {
@@ -1902,6 +2415,149 @@ function friendlyAuthError(err) {
     case 'auth/network-request-failed':   return 'Network error. Check your connection.';
     case 'auth/requires-recent-login':    return 'Please log out and sign in again, then retry.';
     default:                              return (err && err.message) ? err.message : 'Something went wrong.';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHANGE EMAIL
+   ═══════════════════════════════════════════════════════════════ */
+function showEmailMsg(text, type) {
+  const el = document.getElementById('emailMsg');
+  el.textContent = text;
+  el.className = 'email-msg visible ' + (type || 'error');
+}
+function hideEmailMsg() {
+  const el = document.getElementById('emailMsg');
+  el.className = 'email-msg';
+  el.textContent = '';
+}
+
+function promptEmailChange() {
+  hideEmailMsg();
+  const input = document.getElementById('newEmailInput');
+  const newEmail = input.value.trim();
+
+  if (!newEmail) {
+    showEmailMsg('Please enter your new email address.');
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+    showEmailMsg('Please enter a valid email address.');
+    return;
+  }
+  if (!CURRENT_USER || !CURRENT_USER.email) {
+    showEmailMsg('You are not signed in.');
+    return;
+  }
+  if (newEmail.toLowerCase() === CURRENT_USER.email.toLowerCase()) {
+    showEmailMsg('The new email is the same as your current email.');
+    return;
+  }
+
+  document.getElementById('emailConfirmCurrent').textContent = CURRENT_USER.email;
+  document.getElementById('emailConfirmNew').textContent = newEmail;
+
+  const confirmInput = document.getElementById('emailConfirmInput');
+  confirmInput.value = '';
+  confirmInput.className = 'email-confirm-input';
+  document.getElementById('emailConfirmHint').innerHTML = `Enter <strong>YES</strong> (uppercase) to enable confirmation`;
+
+  const yesBtn = document.getElementById('emailConfirmYesBtn');
+  yesBtn.disabled = true;
+  yesBtn.textContent = 'Yes, Update Email';
+
+  document.getElementById('emailConfirmOverlay').classList.remove('hidden');
+  setTimeout(() => confirmInput.focus(), 100);
+}
+
+function validateEmailConfirmInput() {
+  const input = document.getElementById('emailConfirmInput');
+  const hint = document.getElementById('emailConfirmHint');
+  const yesBtn = document.getElementById('emailConfirmYesBtn');
+  const val = input.value.trim();
+
+  if (val === 'YES') {
+    input.className = 'email-confirm-input valid';
+    hint.innerHTML = `✓ Confirmed — click <strong>Yes, Update Email</strong> to proceed`;
+    yesBtn.disabled = false;
+  } else if (val.length === 0) {
+    input.className = 'email-confirm-input';
+    hint.innerHTML = `Enter <strong>YES</strong> (uppercase) to enable confirmation`;
+    yesBtn.disabled = true;
+  } else {
+    input.className = 'email-confirm-input invalid';
+    hint.innerHTML = `Type exactly <strong>YES</strong> in uppercase (case-sensitive)`;
+    yesBtn.disabled = true;
+  }
+}
+
+function closeEmailConfirm() {
+  document.getElementById('emailConfirmOverlay').classList.add('hidden');
+  document.getElementById('emailConfirmInput').value = '';
+  document.getElementById('emailConfirmInput').className = 'email-confirm-input';
+}
+
+async function confirmEmailChange() {
+  const yesBtn = document.getElementById('emailConfirmYesBtn');
+  const newEmail = document.getElementById('emailConfirmNew').textContent;
+
+  yesBtn.disabled = true;
+  yesBtn.textContent = 'Updating…';
+
+  const user = auth.currentUser;
+  if (!user) {
+    yesBtn.disabled = false;
+    yesBtn.textContent = 'Yes, Update Email';
+    closeEmailConfirm();
+    showEmailMsg('You are not signed in.', 'error');
+    return;
+  }
+
+  try {
+    await user.updateEmail(newEmail);
+
+    try {
+      await db.collection('disputeUsers').doc(user.uid).set({
+        email: newEmail,
+        emailUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    } catch (e) { console.warn('disputeUsers update failed:', e); }
+
+    try {
+      if (CURRENT_USER && CURRENT_USER.agentName) {
+        const agentKey = encodeNameKey(CURRENT_USER.agentName);
+        const claimRef = db.collection('agentClaims').doc(agentKey);
+        const claimSnap = await claimRef.get();
+        if (claimSnap.exists && claimSnap.data().uid === user.uid) {
+          await claimRef.update({ email: newEmail });
+        }
+      }
+    } catch (e) { console.warn('agentClaims update failed:', e); }
+
+    if (CURRENT_USER) CURRENT_USER.email = newEmail;
+    document.getElementById('setEmail').textContent = newEmail;
+    paintSidebarIdentity(CURRENT_USER.agentName, CURRENT_USER.agentPhoto, newEmail);
+
+    closeEmailConfirm();
+    document.getElementById('newEmailInput').value = '';
+    showEmailMsg('Email updated successfully. Use the new email next time you sign in.', 'ok');
+  } catch (err) {
+    console.error('Change email failed:', err);
+    const code = err && err.code ? err.code : '';
+    let msg;
+    switch (code) {
+      case 'auth/email-already-in-use':    msg = 'That email is already in use by another account.'; break;
+      case 'auth/invalid-email':           msg = 'Invalid email address.'; break;
+      case 'auth/requires-recent-login':   msg = 'Please log out, sign in again, then retry.'; break;
+      case 'auth/operation-not-allowed':   msg = 'Email updates are disabled. Contact an admin.'; break;
+      case 'auth/network-request-failed':  msg = 'Network error. Check your connection.'; break;
+      case 'auth/too-many-requests':       msg = 'Too many attempts. Please wait and try again.'; break;
+      default:                             msg = (err && err.message) ? err.message : 'Could not update email.';
+    }
+    closeEmailConfirm();
+    showEmailMsg(msg, 'error');
+    yesBtn.disabled = false;
+    yesBtn.textContent = 'Yes, Update Email';
   }
 }
 
@@ -2013,6 +2669,7 @@ function showScreen(which) {
   document.getElementById('authScreen').classList.toggle('hidden', which !== 'auth');
   document.getElementById('loadingScreen').classList.toggle('hidden', which !== 'loading');
   document.getElementById('mainApp').classList.toggle('hidden', which !== 'app');
+  document.getElementById('agentSetupScreen').classList.toggle('hidden', which !== 'agent-setup');
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2020,16 +2677,51 @@ function showScreen(which) {
    ═══════════════════════════════════════════════════════════════ */
 auth.onAuthStateChanged(async (user) => {
   if (user) {
-    let name = (user.displayName || '').trim();
-    let agentName = '';
+    // Fetch the disputeUsers doc to check if agent is linked
+    let userDocData = null;
     try {
       const doc = await db.collection('disputeUsers').doc(user.uid).get();
-      if (doc.exists) {
-        const d = doc.data();
-        if (!name && d.name) name = d.name;
-        if (d.agentName) agentName = d.agentName;
+      if (doc.exists) userDocData = doc.data();
+    } catch (e) { console.warn('disputeUsers fetch failed:', e); }
+
+    // If user has no agentName, they need to pick one (new Google users)
+    if (!userDocData || !userDocData.agentName) {
+      // Double-check: maybe they have an agentClaim already but no user doc
+      // (edge case: Google user who completed setup but doc write failed)
+      let hasAgentClaim = false;
+      try {
+        const claimsSnap = await db.collection('agentClaims').where('uid', '==', user.uid).limit(1).get();
+        if (!claimsSnap.empty) {
+          const claimData = claimsSnap.docs[0].data();
+          if (claimData && claimData.agentName) {
+            // Repair: write the disputeUsers doc
+            await db.collection('disputeUsers').doc(user.uid).set({
+              name: user.displayName || (user.email || '').split('@')[0] || 'User',
+              email: user.email,
+              agentName: claimData.agentName,
+              authProvider: user.providerData[0]?.providerId || 'unknown',
+              createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            userDocData = { agentName: claimData.agentName, name: user.displayName, email: user.email };
+            hasAgentClaim = true;
+          }
+        }
+      } catch (e) { console.warn('agentClaims lookup failed:', e); }
+
+      if (!hasAgentClaim) {
+        // Show agent setup screen
+        showAgentSetupScreen(user);
+        return;
       }
-    } catch (e) {}
+    }
+
+    // ── Normal flow: user has agent linked ──
+    let name = (user.displayName || '').trim();
+    let agentName = '';
+    if (userDocData) {
+      if (!name && userDocData.name) name = userDocData.name;
+      if (userDocData.agentName) agentName = userDocData.agentName;
+    }
     if (!name) name = (user.email || '').split('@')[0] || 'User';
     if (!agentName) agentName = name;
 
@@ -2050,6 +2742,8 @@ auth.onAuthStateChanged(async (user) => {
     updatePreview();
   } else {
     CURRENT_USER = null;
+    PENDING_GOOGLE_USER = null;
+    PENDING_AGENT_CHOICE = null;
     showScreen('auth');
     const lp = document.getElementById('loginPassword');
     if (lp) lp.value = '';
@@ -2065,6 +2759,9 @@ auth.onAuthStateChanged(async (user) => {
     const f = document.getElementById('pwdForm'); if (f) f.reset();
     hidePwdMsg();
     updatePwdStrength();
+    const ef = document.getElementById('emailForm'); if (ef) ef.reset();
+    hideEmailMsg();
+    setAuthBusy(false, 'google');
   }
 });
 
@@ -2418,7 +3115,6 @@ window.saveEditTicket = async function () {
     skipReason: newStatus === 'Skipped' ? newSkip : firebase.firestore.FieldValue.delete ? undefined : null
   };
 
-  // remove undefined keys
   Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
 
   const btn = document.getElementById('editTicketSaveBtn');
@@ -2519,6 +3215,10 @@ function renderSettingsPanel() {
       avEl.style.background = '';
     }
   }
+
+  const newEmailInput = g('newEmailInput');
+  if (newEmailInput) newEmailInput.value = '';
+  hideEmailMsg();
 
   renderSettingsStats();
 }
